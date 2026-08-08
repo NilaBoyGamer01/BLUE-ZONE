@@ -495,8 +495,22 @@
       <h2>Built by the community</h2>
       <p>Screenshots, builds and fan art shared by BLUE-ZONE members.</p>
     </div>
-    <p class="gallery-hint reveal">Empty slots show a <b>+</b> — an admin can add photos from the Admin panel (footer link).</p>
+    <p class="gallery-hint reveal">Got a build worth showing off? Upload a screenshot below — it goes live for everyone instantly.</p>
     <div class="gallery-grid reveal" id="galleryGrid"></div>
+
+    <div class="review-form reveal" id="galleryUploadForm" style="margin-top:34px;">
+      <h3>SHARE A SCREENSHOT</h3>
+      <div class="edit-card-top" style="margin-bottom:14px;">
+        <img class="gallery-edit-thumb" src="" id="galUploadThumb" alt="preview" style="width:110px; flex:none; display:none;">
+        <label class="file-btn" style="align-self:center;">Choose photo<input type="file" accept="image/*" style="display:none;" id="galUploadFile"></label>
+      </div>
+      <div class="field"><label>Title</label><input type="text" id="galUploadTitle" placeholder="e.g. Sky Base v3" maxlength="40"></div>
+      <div class="field"><label>Your Name / Builder Tag</label><input type="text" id="galUploadBuilder" placeholder="e.g. Notch_Fan22" maxlength="40"></div>
+      <div class="error-msg" id="galUploadError">Please choose a photo to upload.</div>
+      <button class="btn btn-primary" id="submitGalleryUpload">Upload Photo</button>
+      <p class="review-form-msg" id="galUploadMsg">✓ Thanks — your photo is live in the gallery!</p>
+      <p class="hint" style="margin-top:14px;">Photos are visible to every visitor. An admin can remove any photo from the Admin panel.</p>
+    </div>
   </div>
 </section>
 
@@ -543,7 +557,7 @@
       <div class="error-msg" id="reviewFormError">Please add your name, a star rating, and a short review.</div>
       <button class="btn btn-primary" id="submitReview">Submit Review</button>
       <p class="review-form-msg" id="reviewFormMsg">✓ Thanks — your review has been posted!</p>
-      <p class="hint" style="margin-top:14px;">Reviews are stored in this browser's admin data and shown to everyone visiting from it. An admin can remove any review from the Admin panel.</p>
+      <p class="hint" style="margin-top:14px;">Reviews are visible to every visitor. An admin can remove any review from the Admin panel.</p>
     </div>
   </div>
 </section>
@@ -729,9 +743,46 @@ const firebaseConfig = {
   appId: "1:273471219018:web:46dde84bc63957ce3d0db3",
   measurementId: "G-TP93NNVPRF"
 };
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const siteDataRef = db.ref('siteData');
+let siteDataRef;
+let usingFirebase = false;
+
+try{
+  if(typeof firebase !== 'undefined'){
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    siteDataRef = db.ref('siteData');
+    usingFirebase = true;
+  } else {
+    console.warn('Firebase SDK did not load (blocked network or offline) — falling back to per-browser local storage.');
+  }
+}catch(e){
+  console.warn('Firebase failed to initialize — falling back to per-browser local storage.', e);
+}
+
+if(!usingFirebase){
+  // Fallback so the page keeps working even if the Firebase CDN scripts can't load
+  // (e.g. a sandboxed preview with no external network access, or offline viewing).
+  // Data is saved to this browser only until the page is opened somewhere Firebase can reach.
+  const LOCAL_KEY = 'bluezoneSiteData';
+  const localListeners = [];
+  siteDataRef = {
+    on(event, successCb){
+      localListeners.push(successCb);
+      let raw = null;
+      try{ raw = localStorage.getItem(LOCAL_KEY); }catch(e){}
+      successCb({ val: () => raw ? JSON.parse(raw) : null });
+    },
+    set(data){
+      try{
+        localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
+        localListeners.forEach(cb => cb({ val: () => data }));
+        return Promise.resolve();
+      }catch(e){
+        return Promise.reject(e);
+      }
+    }
+  };
+}
 </script>
 
 <script>
@@ -848,27 +899,32 @@ function renderAll(data){
     newsList.appendChild(item);
   });
 
-  const galleryGrid = document.getElementById('galleryGrid');
-  galleryGrid.innerHTML = '';
-  data.gallery.forEach((g, i) => {
-    const item = document.createElement('div');
-    item.className = 'gallery-item reveal';
-    item.style.transitionDelay = Math.min(i * 60, 360) + 'ms';
-    if(g.src){
-      item.innerHTML = `
-        <img src="${g.src}" alt="${escapeHtml(g.title || 'Community build')}">
-        <div class="gallery-cap"><b>${escapeHtml(g.title || 'Untitled')}</b><span>${escapeHtml(g.builder ? 'by ' + g.builder : '')}</span></div>
-      `;
-      item.addEventListener('click', () => openLightbox(g.src, g.title));
-    } else {
-      item.innerHTML = `<div class="gallery-placeholder"><span class="plus">+</span><small>No photo yet</small></div>`;
-    }
-    galleryGrid.appendChild(item);
-  });
+  renderGallery(data);
 
   renderReviews(data.reviews || []);
 
   observeReveals();
+}
+
+function renderGallery(data){
+  const galleryGrid = document.getElementById('galleryGrid');
+  galleryGrid.innerHTML = '';
+  const filled = (data.gallery || []).filter(g => g.src);
+  if(!filled.length){
+    galleryGrid.innerHTML = `<div class="reviews-empty" style="grid-column:1/-1;">No photos yet — be the first to upload one below.</div>`;
+    return;
+  }
+  filled.forEach((g, i) => {
+    const item = document.createElement('div');
+    item.className = 'gallery-item reveal';
+    item.style.transitionDelay = Math.min(i * 60, 360) + 'ms';
+    item.innerHTML = `
+      <img src="${g.src}" alt="${escapeHtml(g.title || 'Community build')}">
+      <div class="gallery-cap"><b>${escapeHtml(g.title || 'Untitled')}</b><span>${escapeHtml(g.builder ? 'by ' + g.builder : '')}</span></div>
+    `;
+    item.addEventListener('click', () => openLightbox(g.src, g.title));
+    galleryGrid.appendChild(item);
+  });
 }
 
 function starString(rating){
@@ -1034,6 +1090,50 @@ document.getElementById('submitReview').addEventListener('click', () => {
   textEl.value = '';
   selectedReviewRating = 0;
   reviewStarPicker.querySelectorAll('button').forEach(b => b.classList.remove('filled'));
+  msgEl.classList.add('show');
+  setTimeout(() => msgEl.classList.remove('show'), 3200);
+});
+
+/* ===================== GALLERY: VISITOR UPLOAD ===================== */
+let pendingGalleryDataUrl = null;
+const galUploadFileInput = document.getElementById('galUploadFile');
+const galUploadThumb = document.getElementById('galUploadThumb');
+galUploadFileInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  resizeImageFile(file, 900, (dataUrl) => {
+    pendingGalleryDataUrl = dataUrl;
+    galUploadThumb.src = dataUrl;
+    galUploadThumb.style.display = '';
+  });
+});
+
+document.getElementById('submitGalleryUpload').addEventListener('click', () => {
+  const titleEl = document.getElementById('galUploadTitle');
+  const builderEl = document.getElementById('galUploadBuilder');
+  const errorEl = document.getElementById('galUploadError');
+  const msgEl = document.getElementById('galUploadMsg');
+
+  if(!pendingGalleryDataUrl){
+    errorEl.classList.add('show');
+    msgEl.classList.remove('show');
+    return;
+  }
+  errorEl.classList.remove('show');
+
+  siteData.gallery.push({ src: pendingGalleryDataUrl, title: titleEl.value.trim(), builder: builderEl.value.trim() });
+  renderGallery(siteData);
+  saveData(siteData).catch(err => {
+    console.error(err);
+    showToast('⚠ Could not upload photo — check your connection.');
+  });
+
+  pendingGalleryDataUrl = null;
+  galUploadFileInput.value = '';
+  galUploadThumb.src = '';
+  galUploadThumb.style.display = 'none';
+  titleEl.value = '';
+  builderEl.value = '';
   msgEl.classList.add('show');
   setTimeout(() => msgEl.classList.remove('show'), 3200);
 });
