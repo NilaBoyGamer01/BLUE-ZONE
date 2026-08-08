@@ -181,6 +181,33 @@
   .cta-band h2{ font-family:'Press Start 2P'; font-size:18px; line-height:1.7; margin-bottom:14px; }
   .cta-band p{ color: var(--text-dim); margin-bottom:24px; }
 
+  /* ---------------- REVIEWS ---------------- */
+  .reviews-summary{ display:flex; align-items:center; gap:24px; flex-wrap:wrap; background: var(--bg-panel); border:1px solid var(--line); padding:24px 28px; margin-bottom:32px; }
+  .reviews-summary-score{ font-family:'Press Start 2P'; font-size:30px; color: var(--gold); flex:none; }
+  .reviews-summary-stars{ font-size:16px; letter-spacing:2px; color: var(--gold); }
+  .reviews-summary-count{ font-family:'JetBrains Mono'; font-size:12px; color: var(--text-dim); margin-top:4px; }
+  .stars{ color: var(--gold); letter-spacing:1px; font-size:14px; white-space:nowrap; }
+  .stars .star-off{ color: var(--line); }
+
+  .reviews-grid{ display:grid; grid-template-columns:repeat(2, 1fr); gap:18px; margin-bottom:40px; }
+  .review-card{ background: var(--bg-panel); border:1px solid var(--line); padding:22px; transition: border-color .25s ease, transform .25s ease; }
+  .review-card:hover{ border-color: var(--blue-deep); transform: translateY(-3px); }
+  .review-card-top{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+  .review-name{ font-weight:700; font-size:14.5px; }
+  .review-date{ font-family:'JetBrains Mono'; font-size:11px; color: var(--text-dim); margin-top:2px; }
+  .review-text{ font-size:13.5px; color: var(--text-dim); }
+  .reviews-empty{ text-align:center; padding:40px 20px; color: var(--text-dim); font-family:'JetBrains Mono'; font-size:12.5px;
+    border:1px dashed var(--line); margin-bottom:40px; }
+
+  .review-form{ background: var(--bg-panel); border:1px solid var(--blue-deep); padding:30px; max-width:560px; }
+  .review-form h3{ font-family:'Press Start 2P'; font-size:14px; margin-bottom:20px; line-height:1.6; }
+  .star-picker{ display:flex; gap:6px; }
+  .star-picker button{ background:none; border:none; font-size:26px; line-height:1; cursor:pointer; color: var(--line); padding:2px; transition: color .15s ease, transform .1s ease; }
+  .star-picker button:hover{ transform: scale(1.15); }
+  .star-picker button.filled{ color: var(--gold); }
+  .review-form-msg{ font-family:'JetBrains Mono'; font-size:12px; color: var(--emerald); margin-top:12px; display:none; }
+  .review-form-msg.show{ display:block; }
+
   footer{ border-top:1px solid var(--line); padding:44px 0 26px; margin-top:10px; }
   .footer-grid{ display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; gap:32px; margin-bottom:32px; }
   .footer-col h4{ font-family:'JetBrains Mono'; font-size:12px; letter-spacing:1px; text-transform:uppercase; color: var(--blue-soft); margin-bottom:14px; }
@@ -190,36 +217,71 @@
     font-size:12.5px; color: var(--text-dim); font-family:'JetBrains Mono'; flex-wrap:wrap; gap:8px; }
 
   /* ---------------- ADMIN ---------------- */
-  .admin-overlay{ position:fixed; inset:0; background: rgba(4,9,18,0.92); backdrop-filter: blur(4px); z-index:2000;
+  .admin-overlay{ position:fixed; inset:0; background: rgba(4,9,18,0.94); backdrop-filter: blur(6px); z-index:2000;
     display:flex; align-items:flex-start; justify-content:center; padding:40px 20px; overflow-y:auto;
     opacity:0; pointer-events:none; transition: opacity .2s ease; }
   .admin-overlay.open{ opacity:1; pointer-events:auto; }
-  .admin-box{ background: var(--bg-panel); border:1px solid var(--blue-deep); width:100%; max-width:480px; padding:34px; margin-top:6vh;
+
+  /* login box */
+  .admin-box{ background: linear-gradient(180deg, var(--bg-panel), var(--bg-panel-2)); border:1px solid var(--blue-deep);
+    box-shadow: 0 0 0 1px rgba(53,217,255,0.08), 0 24px 60px -20px rgba(0,0,0,0.6);
+    width:100%; max-width:420px; padding:38px 36px; margin-top:8vh; text-align:center;
     transform: scale(.88) translateY(16px); opacity:0; transition: transform .32s cubic-bezier(.34,1.56,.64,1), opacity .25s ease; }
   .admin-overlay.open .admin-box{ transform: scale(1) translateY(0); opacity:1; }
   .admin-box.shake{ animation: shakeBox .4s ease; }
   @keyframes shakeBox{ 10%,90%{transform:translateX(-2px);} 20%,80%{transform:translateX(3px);} 30%,50%,70%{transform:translateX(-6px);} 40%,60%{transform:translateX(6px);} }
-  .admin-panel{ background: var(--bg-panel); border:1px solid var(--blue-deep); width:100%; max-width:880px; padding:0;
-    transform: scale(.9) translateY(16px); opacity:0; transition: transform .32s cubic-bezier(.34,1.56,.64,1), opacity .25s ease; }
+  .admin-box-icon{ width:52px; height:52px; margin:0 auto 18px; display:flex; align-items:center; justify-content:center;
+    background: linear-gradient(135deg, rgba(53,217,255,0.16), rgba(47,91,215,0.16)); border:1px solid var(--blue-deep); font-size:22px; }
+  .admin-box h3{ text-align:center; }
+  .admin-box .field{ text-align:left; }
+  .admin-box .btn{ flex:1; justify-content:center; }
+
+  /* panel shell */
+  .admin-panel{ background: var(--bg-panel); border:1px solid var(--blue-deep); width:100%; max-width:920px; padding:0;
+    box-shadow: 0 0 0 1px rgba(53,217,255,0.08), 0 30px 70px -24px rgba(0,0,0,0.65);
+    transform: scale(.9) translateY(16px); opacity:0; transition: transform .32s cubic-bezier(.34,1.56,.64,1), opacity .25s ease;
+    max-height:88vh; display:flex; flex-direction:column; }
   .admin-overlay.open .admin-panel{ transform: scale(1) translateY(0); opacity:1; }
-  .admin-head{ display:flex; align-items:center; justify-content:space-between; padding:22px 28px; border-bottom:1px solid var(--line); }
-  .admin-head h3{ font-family:'Press Start 2P'; font-size:14px; }
-  .admin-tabs{ display:flex; gap:2px; padding:0 28px; border-bottom:1px solid var(--line); }
-  .admin-tab{ font-family:'JetBrains Mono'; font-size:12px; text-transform:uppercase; letter-spacing:.5px; padding:14px 16px;
-    color: var(--text-dim); cursor:pointer; border-bottom:2px solid transparent; background:none; border-top:none; border-left:none; border-right:none; transition: color .2s ease, border-color .2s ease; }
-  .admin-tab.active{ color: var(--blue-soft); border-bottom-color: var(--blue); }
-  .admin-body{ padding:26px 28px; max-height:60vh; overflow-y:auto; }
+  .admin-head{ display:flex; align-items:center; justify-content:space-between; gap:16px; padding:20px 28px;
+    background: linear-gradient(135deg, rgba(53,217,255,0.08), rgba(47,91,215,0.06)); border-bottom:1px solid var(--line); flex:none; }
+  .admin-head-title{ display:flex; align-items:center; gap:12px; }
+  .admin-head-title .dot-badge{ width:34px; height:34px; flex:none; display:flex; align-items:center; justify-content:center;
+    background: linear-gradient(135deg, var(--blue), var(--lapis)); font-size:16px; }
+  .admin-head h3{ font-family:'Press Start 2P'; font-size:13px; line-height:1.5; }
+  .admin-head p{ font-family:'JetBrains Mono'; font-size:11px; color: var(--text-dim); margin-top:4px; }
+
+  /* body = sidebar tabs + content, sits below head, above sticky footer */
+  .admin-main{ display:flex; flex:1; min-height:0; }
+  .admin-tabs{ flex:none; width:190px; display:flex; flex-direction:column; gap:2px; padding:16px 12px; border-right:1px solid var(--line); overflow-y:auto; }
+  .admin-tab{ display:flex; align-items:center; gap:10px; font-family:'JetBrains Mono'; font-size:12px; text-transform:uppercase; letter-spacing:.5px;
+    padding:12px 14px; text-align:left; color: var(--text-dim); cursor:pointer; background:none; border:1px solid transparent;
+    transition: color .2s ease, background-color .2s ease, border-color .2s ease; }
+  .admin-tab .tab-icon{ font-size:15px; flex:none; }
+  .admin-tab:hover{ color: var(--text); background: rgba(255,255,255,0.03); }
+  .admin-tab.active{ color: var(--blue-soft); background: rgba(53,217,255,0.09); border-color: var(--blue-deep); }
+  .admin-body{ flex:1; min-width:0; padding:26px 30px; overflow-y:auto; }
   .admin-pane{ display:none; }
   .admin-pane.active{ display:block; animation: fadeInPane .3s ease; }
   @keyframes fadeInPane{ from{ opacity:0; transform: translateY(8px);} to{ opacity:1; transform: translateY(0);} }
-  .admin-foot{ display:flex; justify-content:space-between; gap:10px; padding:20px 28px; border-top:1px solid var(--line); flex-wrap:wrap; }
+  .admin-foot{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding:16px 28px; border-top:1px solid var(--line);
+    background: var(--bg-panel); box-shadow: 0 -8px 20px -12px rgba(0,0,0,0.5); flex-wrap:wrap; flex:none; }
+  .admin-foot .save-hint{ font-family:'JetBrains Mono'; font-size:11px; color: var(--text-dim); }
+  .admin-foot-actions{ display:flex; gap:10px; }
+
+  /* section grouping inside "page content" tab */
+  .field-section{ margin-bottom:26px; }
+  .field-section:last-child{ margin-bottom:0; }
+  .field-section-head{ display:flex; align-items:center; gap:10px; margin-bottom:14px; padding-bottom:8px; border-bottom:1px solid var(--line); }
+  .field-section-head .sec-icon{ font-size:14px; }
+  .field-section-head h4{ font-family:'JetBrains Mono'; font-size:11.5px; text-transform:uppercase; letter-spacing:1px; color: var(--blue-soft); }
 
   .field{ margin-bottom:16px; }
   .field label{ display:block; font-family:'JetBrains Mono'; font-size:11px; text-transform:uppercase; letter-spacing:.5px; color: var(--text-dim); margin-bottom:6px; }
   .field input[type=text], .field input[type=password], .field input[type=number], .field textarea{
-    width:100%; background: var(--bg); border:1px solid var(--line); color: var(--text); padding:10px 12px; font-family:'Rubik'; font-size:13.5px;
+    width:100%; background: var(--bg); border:1px solid var(--line); color: var(--text); padding:11px 13px; font-family:'Rubik'; font-size:13.5px;
   }
   .field input, .field textarea{ transition: border-color .2s ease, box-shadow .2s ease; }
+  .field input:hover, .field textarea:hover{ border-color: var(--blue-dark); }
   .field input:focus, .field textarea:focus{ outline:none; border-color: var(--blue-deep); box-shadow: 0 0 0 3px rgba(53,217,255,0.15); }
   .field textarea{ min-height:70px; resize:vertical; }
   .field-row{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
@@ -227,16 +289,34 @@
   .error-msg.show{ display:block; }
   .hint{ font-size:12px; color: var(--text-dim); margin-top:-8px; margin-bottom:16px; }
 
-  .edit-card{ background: var(--bg); border:1px solid var(--line); padding:18px; margin-bottom:14px; }
+  .tab-toolbar{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; }
+  .tab-toolbar .hint{ margin:0; }
+  .count-chip{ font-family:'JetBrains Mono'; font-size:10.5px; color: var(--blue-soft); border:1px solid var(--blue-deep);
+    padding:3px 10px; letter-spacing:.5px; flex:none; }
+
+  .edit-card{ background: var(--bg); border:1px solid var(--line); padding:0; margin-bottom:14px; transition: border-color .2s ease; }
+  .edit-card:hover{ border-color: var(--blue-dark); }
+  .edit-card-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 16px;
+    border-bottom:1px solid var(--line); background: rgba(255,255,255,0.02); }
+  .edit-card-head .card-title{ display:flex; align-items:center; gap:10px; font-family:'JetBrains Mono'; font-size:11.5px; color: var(--text-dim); letter-spacing:.5px; }
+  .edit-card-head .card-num{ width:22px; height:22px; flex:none; display:flex; align-items:center; justify-content:center;
+    background: var(--bg-panel-2); border:1px solid var(--blue-deep); color: var(--blue-soft); font-size:10.5px; }
+  .edit-card-body{ padding:18px; }
+  .remove-btn-icon{ background:none; border:1px solid var(--line); color: var(--text-dim); font-family:'JetBrains Mono'; font-size:11px;
+    padding:5px 10px; cursor:pointer; transition: border-color .2s ease, color .2s ease; }
+  .remove-btn-icon:hover{ border-color: var(--danger); color: var(--danger); }
   .edit-card-top{ display:flex; gap:14px; align-items:flex-start; margin-bottom:12px; }
   .edit-avatar-wrap{ flex:none; text-align:center; }
-  .edit-avatar-wrap img{ width:56px; height:56px; border-radius:50%; object-fit:cover; margin-bottom:6px; background: var(--bg-panel-2); }
+  .edit-avatar-wrap img{ width:56px; height:56px; border-radius:50%; object-fit:cover; margin-bottom:6px; background: var(--bg-panel-2);
+    box-shadow: 0 0 0 3px var(--bg), 0 0 0 4px var(--blue-deep); }
   .edit-fields{ flex:1; }
   .file-btn{ font-family:'JetBrains Mono'; font-size:10.5px; color: var(--blue-soft); cursor:pointer; text-decoration:underline; }
   .checkbox-row{ display:flex; align-items:center; gap:8px; font-family:'JetBrains Mono'; font-size:11.5px; color: var(--text-dim); margin-top:8px; }
   .remove-row{ text-align:right; margin-top:8px; }
 
   .gallery-edit-thumb{ width:100%; aspect-ratio:1/1; object-fit:cover; background: var(--bg-panel-2); margin-bottom:10px; }
+  .empty-state{ text-align:center; padding:40px 20px; color: var(--text-dim); font-family:'JetBrains Mono'; font-size:12.5px;
+    border:1px dashed var(--line); }
 
   .admin-link{ background:none; }
   .save-toast{ position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(20px) scale(.9); background: var(--emerald); color:#04180d;
@@ -252,6 +332,7 @@
     .gallery-grid{ grid-template-columns:repeat(2,1fr); }
     .footer-grid{ grid-template-columns:1fr 1fr; }
     .field-row{ grid-template-columns:1fr; }
+    .reviews-grid{ grid-template-columns:1fr; }
   }
   @media (max-width: 620px){
     nav{ display:none; }
@@ -260,6 +341,13 @@
     .gallery-grid{ grid-template-columns:1fr 1fr; }
     .footer-grid{ grid-template-columns:1fr; }
     .hero h1{ font-size:21px; }
+  }
+  @media (max-width: 720px){
+    .admin-main{ flex-direction:column; }
+    .admin-tabs{ width:100%; flex-direction:row; overflow-x:auto; border-right:none; border-bottom:1px solid var(--line); padding:10px 12px; }
+    .admin-tab{ flex:none; }
+    .admin-body{ padding:20px; }
+    #galleryEditGrid{ grid-template-columns:repeat(2,1fr) !important; }
   }
 </style>
 </head>
@@ -279,6 +367,7 @@
         <li><a href="#discord">Discord</a></li>
         <li><a href="#news">News</a></li>
         <li><a href="#gallery">Gallery</a></li>
+        <li><a href="#reviews">Reviews</a></li>
         <li><a href="#contact">Contact</a></li>
       </ul>
     </nav>
@@ -416,6 +505,51 @@
   <img id="lightboxImg" src="" alt="">
 </div>
 
+<div class="wrap"><div class="divider"></div></div>
+
+<!-- REVIEWS -->
+<section id="reviews">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow">Community Reviews</div>
+      <h2>What players<br>are saying</h2>
+      <p>Real feedback from BLUE-ZONE members. Been here a while? Leave your own.</p>
+    </div>
+
+    <div class="reviews-summary reveal" id="reviewsSummary">
+      <div>
+        <div class="reviews-summary-score" id="reviewsAvgScore">5.0</div>
+        <div class="reviews-summary-stars" id="reviewsAvgStars">★★★★★</div>
+      </div>
+      <div class="reviews-summary-count" id="reviewsCount">Based on 1 review</div>
+    </div>
+
+    <div class="reviews-grid reveal" id="reviewsGrid"></div>
+
+    <div class="review-form reveal" id="reviewForm">
+      <h3>WRITE A REVIEW</h3>
+      <div class="field"><label>Your Name</label><input type="text" id="reviewName" placeholder="e.g. Notch_Fan22" maxlength="40"></div>
+      <div class="field">
+        <label>Rating</label>
+        <div class="star-picker" id="reviewStarPicker">
+          <button type="button" data-star="1">★</button>
+          <button type="button" data-star="2">★</button>
+          <button type="button" data-star="3">★</button>
+          <button type="button" data-star="4">★</button>
+          <button type="button" data-star="5">★</button>
+        </div>
+      </div>
+      <div class="field"><label>Your Review</label><textarea id="reviewText" placeholder="Tell us what you think of the server..." maxlength="400"></textarea></div>
+      <div class="error-msg" id="reviewFormError">Please add your name, a star rating, and a short review.</div>
+      <button class="btn btn-primary" id="submitReview">Submit Review</button>
+      <p class="review-form-msg" id="reviewFormMsg">✓ Thanks — your review has been posted!</p>
+      <p class="hint" style="margin-top:14px;">Reviews are stored in this browser's admin data and shown to everyone visiting from it. An admin can remove any review from the Admin panel.</p>
+    </div>
+  </div>
+</section>
+
+<div class="wrap"><div class="divider"></div></div>
+
 <!-- CONTACT / CTA -->
 <section id="contact">
   <div class="wrap">
@@ -443,6 +577,7 @@
         <a href="#team">BlueX Team</a>
         <a href="#news">News</a>
         <a href="#gallery">Gallery</a>
+        <a href="#reviews">Reviews</a>
       </div>
       <div class="footer-col">
         <h4>Community</h4>
@@ -465,7 +600,8 @@
 <!-- ADMIN LOGIN -->
 <div class="admin-overlay" id="adminLoginOverlay">
   <div class="admin-box">
-    <h3 class="mono" style="font-family:'Press Start 2P'; font-size:14px; margin-bottom:20px;">🔒 ADMIN LOGIN</h3>
+    <div class="admin-box-icon">🔒</div>
+    <h3 class="mono" style="font-family:'Press Start 2P'; font-size:13px; margin-bottom:22px;">ADMIN LOGIN</h3>
     <div class="field">
       <label for="adminPassword">Password</label>
       <input type="password" id="adminPassword" placeholder="Enter admin password">
@@ -475,7 +611,7 @@
       <button class="btn btn-primary" id="adminLoginSubmit">Log In</button>
       <button class="btn btn-ghost" id="adminLoginCancel">Cancel</button>
     </div>
-    <p class="hint" style="margin-top:18px;">This is a client-side lock for a static site — it stops casual editing, not a determined visitor viewing page source. Saved edits live in this browser only (not shared across devices) unless re-published.</p>
+    <p class="hint" style="margin-top:18px; text-align:left;">This is a client-side lock for a static site — it stops casual editing, not a determined visitor viewing page source. Saved edits live in this browser only (not shared across devices) unless re-published.</p>
   </div>
 </div>
 
@@ -483,51 +619,96 @@
 <div class="admin-overlay" id="adminPanelOverlay">
   <div class="admin-panel">
     <div class="admin-head">
-      <h3>ADMIN PANEL</h3>
+      <div class="admin-head-title">
+        <div class="dot-badge">⛏</div>
+        <div>
+          <h3>ADMIN PANEL</h3>
+          <p>Edit the site's live content, then save</p>
+        </div>
+      </div>
       <button class="btn btn-ghost btn-sm" id="adminLogout">Log Out</button>
     </div>
-    <div class="admin-tabs">
-      <button class="admin-tab active" data-tab="page">Page Content</button>
-      <button class="admin-tab" data-tab="team">Team</button>
-      <button class="admin-tab" data-tab="gallery">Gallery</button>
-      <button class="admin-tab" data-tab="news">News</button>
-    </div>
-    <div class="admin-body">
+    <div class="admin-main">
+      <div class="admin-tabs">
+        <button class="admin-tab active" data-tab="page"><span class="tab-icon">📝</span><span>Page Content</span></button>
+        <button class="admin-tab" data-tab="team"><span class="tab-icon">👥</span><span>Team</span></button>
+        <button class="admin-tab" data-tab="gallery"><span class="tab-icon">🖼</span><span>Gallery</span></button>
+        <button class="admin-tab" data-tab="news"><span class="tab-icon">📰</span><span>News</span></button>
+        <button class="admin-tab" data-tab="reviews"><span class="tab-icon">⭐</span><span>Reviews</span></button>
+      </div>
+      <div class="admin-body">
 
-      <div class="admin-pane active" id="pane-page">
-        <div class="field"><label>Hero Title</label><input type="text" id="editHeroTitle"></div>
-        <div class="field"><label>Hero Subtext</label><textarea id="editHeroLead"></textarea></div>
-        <div class="field-row">
-          <div class="field"><label>Members</label><input type="number" id="editStatMembers"></div>
-          <div class="field"><label>Online Now</label><input type="number" id="editStatOnline"></div>
+        <div class="admin-pane active" id="pane-page">
+
+          <div class="field-section">
+            <div class="field-section-head"><span class="sec-icon">🚀</span><h4>Hero</h4></div>
+            <div class="field"><label>Hero Title</label><input type="text" id="editHeroTitle"></div>
+            <div class="field"><label>Hero Subtext</label><textarea id="editHeroLead"></textarea></div>
+          </div>
+
+          <div class="field-section">
+            <div class="field-section-head"><span class="sec-icon">📊</span><h4>Stats</h4></div>
+            <div class="field-row">
+              <div class="field"><label>Members</label><input type="number" id="editStatMembers"></div>
+              <div class="field"><label>Online Now</label><input type="number" id="editStatOnline"></div>
+            </div>
+            <div class="field"><label>Community Since (year)</label><input type="text" id="editStatSince"></div>
+          </div>
+
+          <div class="field-section">
+            <div class="field-section-head"><span class="sec-icon">💬</span><h4>About</h4></div>
+            <div class="field"><label>About — Paragraph 1</label><textarea id="editAbout1"></textarea></div>
+            <div class="field"><label>About — Paragraph 2</label><textarea id="editAbout2"></textarea></div>
+            <div class="field"><label>Goals (one per line)</label><textarea id="editGoals" style="min-height:110px;"></textarea></div>
+          </div>
+
+          <div class="field-section">
+            <div class="field-section-head"><span class="sec-icon">👥</span><h4>Team Section</h4></div>
+            <div class="field"><label>Team Section Subtitle</label><textarea id="editTeamSubtitle"></textarea></div>
+          </div>
+
         </div>
-        <div class="field"><label>Community Since (year)</label><input type="text" id="editStatSince"></div>
-        <div class="field"><label>About — Paragraph 1</label><textarea id="editAbout1"></textarea></div>
-        <div class="field"><label>About — Paragraph 2</label><textarea id="editAbout2"></textarea></div>
-        <div class="field"><label>Goals (one per line)</label><textarea id="editGoals" style="min-height:110px;"></textarea></div>
-        <div class="field"><label>Team Section Subtitle</label><textarea id="editTeamSubtitle"></textarea></div>
-      </div>
 
-      <div class="admin-pane" id="pane-team">
-        <div id="teamEditList"></div>
-        <button class="btn btn-ghost btn-sm" id="addTeamMember">+ Add Team Member</button>
-      </div>
+        <div class="admin-pane" id="pane-team">
+          <div class="tab-toolbar">
+            <p class="hint" style="margin:0;">One card per team member — edit details or remove below.</p>
+          </div>
+          <div id="teamEditList"></div>
+          <button class="btn btn-ghost btn-sm" id="addTeamMember">+ Add Team Member</button>
+        </div>
 
-      <div class="admin-pane" id="pane-gallery">
-        <p class="hint">Click a photo thumbnail to replace it. Images are resized automatically before saving.</p>
-        <div id="galleryEditGrid" style="display:grid; grid-template-columns:repeat(3,1fr); gap:14px;"></div>
-        <button class="btn btn-ghost btn-sm" id="addGallerySlot" style="margin-top:14px;">+ Add Gallery Slot</button>
-      </div>
+        <div class="admin-pane" id="pane-gallery">
+          <div class="tab-toolbar">
+            <p class="hint" style="margin:0;">Click a photo thumbnail to replace it. Images are resized automatically before saving.</p>
+          </div>
+          <div id="galleryEditGrid" style="display:grid; grid-template-columns:repeat(3,1fr); gap:14px;"></div>
+          <button class="btn btn-ghost btn-sm" id="addGallerySlot" style="margin-top:14px;">+ Add Gallery Slot</button>
+        </div>
 
-      <div class="admin-pane" id="pane-news">
-        <div id="newsEditList"></div>
-        <button class="btn btn-ghost btn-sm" id="addNewsItem">+ Add News Item</button>
-      </div>
+        <div class="admin-pane" id="pane-news">
+          <div class="tab-toolbar">
+            <p class="hint" style="margin:0;">Newest items should go first — order here matches the site.</p>
+          </div>
+          <div id="newsEditList"></div>
+          <button class="btn btn-ghost btn-sm" id="addNewsItem">+ Add News Item</button>
+        </div>
 
+        <div class="admin-pane" id="pane-reviews">
+          <div class="tab-toolbar">
+            <p class="hint" style="margin:0;">Moderate visitor-submitted reviews, or add one manually.</p>
+          </div>
+          <div id="reviewsEditList"></div>
+          <button class="btn btn-ghost btn-sm" id="addReviewItem">+ Add Review</button>
+        </div>
+
+      </div>
     </div>
     <div class="admin-foot">
-      <button class="btn btn-danger btn-sm" id="resetDefaults">Reset to Default</button>
-      <button class="btn btn-primary" id="saveAdminChanges">Save Changes</button>
+      <span class="save-hint">Changes save to this browser only</span>
+      <div class="admin-foot-actions">
+        <button class="btn btn-danger btn-sm" id="resetDefaults">Reset to Default</button>
+        <button class="btn btn-primary" id="saveAdminChanges">Save Changes</button>
+      </div>
     </div>
   </div>
 </div>
@@ -580,6 +761,9 @@ const DEFAULT_DATA = {
     { src:"", title:"", builder:"" },
     { src:"", title:"", builder:"" },
     { src:"", title:"", builder:"" }
+  ],
+  reviews: [
+    { name:"NilaBoyGamer", rating:5, text:"I'm biased since I run the place, but I'm proud of what BLUE-ZONE has turned into. No drama, no toxic admins, just a solid survival world and people who actually show up to events. Come say hi in #announcements.", date:"Aug 2026" }
   ]
 };
 
@@ -587,7 +771,11 @@ const DEFAULT_DATA = {
 function loadData(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
-    if(raw) return JSON.parse(raw);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      if(!Array.isArray(parsed.reviews)) parsed.reviews = JSON.parse(JSON.stringify(DEFAULT_DATA.reviews));
+      return parsed;
+    }
   }catch(e){ console.warn("Could not load saved data, using defaults.", e); }
   return JSON.parse(JSON.stringify(DEFAULT_DATA));
 }
@@ -665,7 +853,51 @@ function renderAll(data){
     galleryGrid.appendChild(item);
   });
 
+  renderReviews(data.reviews || []);
+
   observeReveals();
+}
+
+function starString(rating){
+  const r = Math.round(Number(rating) || 0);
+  let out = '';
+  for(let i = 1; i <= 5; i++){ out += i <= r ? '★' : '<span class="star-off">★</span>'; }
+  return out;
+}
+
+function renderReviews(reviews){
+  const grid = document.getElementById('reviewsGrid');
+  const summary = document.getElementById('reviewsSummary');
+  grid.innerHTML = '';
+
+  if(!reviews.length){
+    summary.style.display = 'none';
+    grid.innerHTML = `<div class="reviews-empty" style="grid-column:1/-1;">No reviews yet — be the first to write one below.</div>`;
+    return;
+  }
+
+  summary.style.display = '';
+  const avg = reviews.reduce((sum, r) => sum + (Number(r.rating) || 0), 0) / reviews.length;
+  document.getElementById('reviewsAvgScore').textContent = avg.toFixed(1);
+  document.getElementById('reviewsAvgStars').innerHTML = starString(avg);
+  document.getElementById('reviewsCount').textContent = `Based on ${reviews.length} review${reviews.length === 1 ? '' : 's'}`;
+
+  reviews.forEach((r, idx) => {
+    const card = document.createElement('div');
+    card.className = 'review-card reveal';
+    card.style.transitionDelay = Math.min(idx * 70, 350) + 'ms';
+    card.innerHTML = `
+      <div class="review-card-top">
+        <div>
+          <div class="review-name">${escapeHtml(r.name)}</div>
+          <div class="review-date">${escapeHtml(r.date)}</div>
+        </div>
+        <div class="stars">${starString(r.rating)}</div>
+      </div>
+      <p class="review-text">${escapeHtml(r.text)}</p>
+    `;
+    grid.appendChild(card);
+  });
 }
 
 function escapeHtml(str){
@@ -730,6 +962,53 @@ document.getElementById('lightboxClose').addEventListener('click', () => lightbo
 lightbox.addEventListener('click', (e) => { if(e.target === lightbox) lightbox.classList.remove('open'); });
 document.addEventListener('keydown', (e) => { if(e.key === 'Escape'){ lightbox.classList.remove('open'); } });
 
+/* ===================== REVIEWS: VISITOR FORM ===================== */
+let selectedReviewRating = 0;
+const reviewStarPicker = document.getElementById('reviewStarPicker');
+reviewStarPicker.querySelectorAll('button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    selectedReviewRating = parseInt(btn.dataset.star, 10);
+    reviewStarPicker.querySelectorAll('button').forEach(b => {
+      b.classList.toggle('filled', parseInt(b.dataset.star, 10) <= selectedReviewRating);
+    });
+  });
+});
+
+document.getElementById('submitReview').addEventListener('click', () => {
+  const nameEl = document.getElementById('reviewName');
+  const textEl = document.getElementById('reviewText');
+  const errorEl = document.getElementById('reviewFormError');
+  const msgEl = document.getElementById('reviewFormMsg');
+  const name = nameEl.value.trim();
+  const text = textEl.value.trim();
+
+  if(!name || !text || selectedReviewRating < 1){
+    errorEl.classList.add('show');
+    msgEl.classList.remove('show');
+    return;
+  }
+  errorEl.classList.remove('show');
+
+  const monthNames = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  const now = new Date();
+  const dateLabel = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+
+  siteData.reviews.unshift({ name, rating: selectedReviewRating, text, date: dateLabel });
+  try{
+    saveData(siteData);
+  }catch(err){
+    console.error(err);
+  }
+  renderReviews(siteData.reviews);
+
+  nameEl.value = '';
+  textEl.value = '';
+  selectedReviewRating = 0;
+  reviewStarPicker.querySelectorAll('button').forEach(b => b.classList.remove('filled'));
+  msgEl.classList.add('show');
+  setTimeout(() => msgEl.classList.remove('show'), 3200);
+});
+
 /* ===================== ADMIN: LOGIN ===================== */
 const adminLoginOverlay = document.getElementById('adminLoginOverlay');
 const adminPanelOverlay = document.getElementById('adminPanelOverlay');
@@ -783,6 +1062,7 @@ function openAdminPanel(){
   populateTeamTab();
   populateGalleryTab();
   populateNewsTab();
+  populateReviewsTab();
   adminPanelOverlay.classList.add('open');
 }
 
@@ -826,25 +1106,30 @@ function buildTeamEditCard(m, idx){
   const card = document.createElement('div');
   card.className = 'edit-card';
   card.innerHTML = `
-    <div class="edit-card-top">
-      <div class="edit-avatar-wrap">
-        <img src="${m.avatar || BLANK_GOLD_AVATAR}" alt="avatar preview" id="teamAvatarPreview${idx}">
-        <label class="file-btn">Change photo<input type="file" accept="image/*" style="display:none;" id="teamAvatarFile${idx}"></label>
-      </div>
-      <div class="edit-fields">
-        <div class="field"><label>Name</label><input type="text" id="teamName${idx}" value="${escapeAttr(m.name)}"></div>
-        <div class="field-row">
-          <div class="field"><label>Role</label><input type="text" id="teamRole${idx}" value="${escapeAttr(m.role)}"></div>
-          <div class="field"><label>Discord Handle</label><input type="text" id="teamHandle${idx}" value="${escapeAttr(m.handle)}"></div>
+    <div class="edit-card-head">
+      <div class="card-title"><span class="card-num">${idx + 1}</span><span>${escapeHtml(m.name) || 'New Member'}</span></div>
+      <button class="remove-btn-icon" data-remove-team="${idx}">✕ Remove</button>
+    </div>
+    <div class="edit-card-body">
+      <div class="edit-card-top">
+        <div class="edit-avatar-wrap">
+          <img src="${m.avatar || BLANK_GOLD_AVATAR}" alt="avatar preview" id="teamAvatarPreview${idx}">
+          <label class="file-btn">Change photo<input type="file" accept="image/*" style="display:none;" id="teamAvatarFile${idx}"></label>
+        </div>
+        <div class="edit-fields">
+          <div class="field"><label>Name</label><input type="text" id="teamName${idx}" value="${escapeAttr(m.name)}"></div>
+          <div class="field-row">
+            <div class="field"><label>Role</label><input type="text" id="teamRole${idx}" value="${escapeAttr(m.role)}"></div>
+            <div class="field"><label>Discord Handle</label><input type="text" id="teamHandle${idx}" value="${escapeAttr(m.handle)}"></div>
+          </div>
         </div>
       </div>
+      <div class="field"><label>Bio</label><textarea id="teamBio${idx}">${escapeHtml(m.bio)}</textarea></div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="teamLeader${idx}" ${m.leader ? 'checked' : ''}>
+        <label for="teamLeader${idx}" style="margin:0;">Mark as Leader (gold highlight)</label>
+      </div>
     </div>
-    <div class="field"><label>Bio</label><textarea id="teamBio${idx}">${escapeHtml(m.bio)}</textarea></div>
-    <div class="checkbox-row">
-      <input type="checkbox" id="teamLeader${idx}" ${m.leader ? 'checked' : ''}>
-      <label for="teamLeader${idx}" style="margin:0;">Mark as Leader (gold highlight)</label>
-    </div>
-    <div class="remove-row"><button class="btn btn-danger btn-sm" data-remove-team="${idx}">Remove Member</button></div>
   `;
   card.querySelector(`#teamAvatarFile${idx}`).addEventListener('change', (e) => {
     const file = e.target.files[0];
@@ -875,11 +1160,16 @@ function buildGalleryEditCard(g, idx){
   const card = document.createElement('div');
   card.className = 'edit-card';
   card.innerHTML = `
-    <img class="gallery-edit-thumb" src="${g.src || BLANK_GOLD_AVATAR}" id="galThumb${idx}" alt="gallery preview">
-    <label class="file-btn">Change photo<input type="file" accept="image/*" style="display:none;" id="galFile${idx}"></label>
-    <div class="field" style="margin-top:10px;"><label>Title</label><input type="text" id="galTitle${idx}" value="${escapeAttr(g.title)}"></div>
-    <div class="field"><label>Builder</label><input type="text" id="galBuilder${idx}" value="${escapeAttr(g.builder)}"></div>
-    <div class="remove-row"><button class="btn btn-danger btn-sm" data-remove-gal="${idx}">Remove Slot</button></div>
+    <div class="edit-card-head">
+      <div class="card-title"><span class="card-num">${idx + 1}</span><span>Slot ${idx + 1}</span></div>
+      <button class="remove-btn-icon" data-remove-gal="${idx}">✕</button>
+    </div>
+    <div class="edit-card-body">
+      <img class="gallery-edit-thumb" src="${g.src || BLANK_GOLD_AVATAR}" id="galThumb${idx}" alt="gallery preview">
+      <label class="file-btn">Change photo<input type="file" accept="image/*" style="display:none;" id="galFile${idx}"></label>
+      <div class="field" style="margin-top:10px;"><label>Title</label><input type="text" id="galTitle${idx}" value="${escapeAttr(g.title)}"></div>
+      <div class="field"><label>Builder</label><input type="text" id="galBuilder${idx}" value="${escapeAttr(g.builder)}"></div>
+    </div>
   `;
   card.querySelector(`#galFile${idx}`).addEventListener('change', (e) => {
     const file = e.target.files[0];
@@ -910,13 +1200,18 @@ function buildNewsEditCard(n, idx){
   const card = document.createElement('div');
   card.className = 'edit-card';
   card.innerHTML = `
-    <div class="field-row">
-      <div class="field"><label>Day</label><input type="text" id="newsDay${idx}" value="${escapeAttr(n.day)}"></div>
-      <div class="field"><label>Month / Year</label><input type="text" id="newsMonth${idx}" value="${escapeAttr(n.month)}"></div>
+    <div class="edit-card-head">
+      <div class="card-title"><span class="card-num">${idx + 1}</span><span>${escapeHtml(n.title) || 'New announcement'}</span></div>
+      <button class="remove-btn-icon" data-remove-news="${idx}">✕ Remove</button>
     </div>
-    <div class="field"><label>Title</label><input type="text" id="newsTitle${idx}" value="${escapeAttr(n.title)}"></div>
-    <div class="field"><label>Body</label><textarea id="newsBody${idx}">${escapeHtml(n.body)}</textarea></div>
-    <div class="remove-row"><button class="btn btn-danger btn-sm" data-remove-news="${idx}">Remove Item</button></div>
+    <div class="edit-card-body">
+      <div class="field-row">
+        <div class="field"><label>Day</label><input type="text" id="newsDay${idx}" value="${escapeAttr(n.day)}"></div>
+        <div class="field"><label>Month / Year</label><input type="text" id="newsMonth${idx}" value="${escapeAttr(n.month)}"></div>
+      </div>
+      <div class="field"><label>Title</label><input type="text" id="newsTitle${idx}" value="${escapeAttr(n.title)}"></div>
+      <div class="field"><label>Body</label><textarea id="newsBody${idx}">${escapeHtml(n.body)}</textarea></div>
+    </div>
   `;
   card.querySelector(`[data-remove-news="${idx}"]`).addEventListener('click', () => {
     editData.news.splice(idx, 1);
@@ -927,6 +1222,52 @@ function buildNewsEditCard(n, idx){
 document.getElementById('addNewsItem').addEventListener('click', () => {
   editData.news.push({ day:"01", month:"JAN 2026", title:"New announcement", body:"" });
   populateNewsTab();
+});
+
+/* ---- Reviews tab ---- */
+function populateReviewsTab(){
+  const list = document.getElementById('reviewsEditList');
+  list.innerHTML = '';
+  if(!editData.reviews.length){
+    list.innerHTML = `<div class="empty-state">No reviews yet.</div>`;
+    return;
+  }
+  editData.reviews.forEach((r, idx) => list.appendChild(buildReviewEditCard(r, idx)));
+}
+function buildReviewEditCard(r, idx){
+  const card = document.createElement('div');
+  card.className = 'edit-card';
+  card.innerHTML = `
+    <div class="edit-card-head">
+      <div class="card-title"><span class="card-num">${idx + 1}</span><span>${escapeHtml(r.name) || 'Reviewer'}</span></div>
+      <button class="remove-btn-icon" data-remove-review="${idx}">✕ Remove</button>
+    </div>
+    <div class="edit-card-body">
+      <div class="field-row">
+        <div class="field"><label>Name</label><input type="text" id="reviewEditName${idx}" value="${escapeAttr(r.name)}"></div>
+        <div class="field"><label>Rating</label>
+          <select id="reviewEditRating${idx}" style="width:100%; background:var(--bg); border:1px solid var(--line); color:var(--text); padding:11px 13px; font-family:'Rubik'; font-size:13.5px;">
+            <option value="5" ${r.rating == 5 ? 'selected' : ''}>★★★★★ (5)</option>
+            <option value="4" ${r.rating == 4 ? 'selected' : ''}>★★★★ (4)</option>
+            <option value="3" ${r.rating == 3 ? 'selected' : ''}>★★★ (3)</option>
+            <option value="2" ${r.rating == 2 ? 'selected' : ''}>★★ (2)</option>
+            <option value="1" ${r.rating == 1 ? 'selected' : ''}>★ (1)</option>
+          </select>
+        </div>
+      </div>
+      <div class="field"><label>Date Label</label><input type="text" id="reviewEditDate${idx}" value="${escapeAttr(r.date)}"></div>
+      <div class="field"><label>Review Text</label><textarea id="reviewEditText${idx}">${escapeHtml(r.text)}</textarea></div>
+    </div>
+  `;
+  card.querySelector(`[data-remove-review="${idx}"]`).addEventListener('click', () => {
+    editData.reviews.splice(idx, 1);
+    populateReviewsTab();
+  });
+  return card;
+}
+document.getElementById('addReviewItem').addEventListener('click', () => {
+  editData.reviews.unshift({ name:"New Reviewer", rating:5, text:"", date:"AUG 2026" });
+  populateReviewsTab();
 });
 
 function escapeAttr(str){
@@ -973,6 +1314,16 @@ document.getElementById('saveAdminChanges').addEventListener('click', () => {
     n.month = document.getElementById(`newsMonth${idx}`).value.trim();
     n.title = document.getElementById(`newsTitle${idx}`).value.trim();
     n.body = document.getElementById(`newsBody${idx}`).value.trim();
+  });
+
+  // pull reviews tab values
+  editData.reviews.forEach((r, idx) => {
+    const nameEl = document.getElementById(`reviewEditName${idx}`);
+    if(!nameEl) return;
+    r.name = nameEl.value.trim();
+    r.rating = parseInt(document.getElementById(`reviewEditRating${idx}`).value, 10);
+    r.date = document.getElementById(`reviewEditDate${idx}`).value.trim();
+    r.text = document.getElementById(`reviewEditText${idx}`).value.trim();
   });
 
   try{
