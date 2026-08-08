@@ -704,7 +704,7 @@
       </div>
     </div>
     <div class="admin-foot">
-      <span class="save-hint">Changes save to this browser only</span>
+      <span class="save-hint">Changes save live for every visitor</span>
       <div class="admin-foot-actions">
         <button class="btn btn-danger btn-sm" id="resetDefaults">Reset to Default</button>
         <button class="btn btn-primary" id="saveAdminChanges">Save Changes</button>
@@ -715,10 +715,28 @@
 
 <div class="save-toast" id="saveToast">✓ Changes saved</div>
 
+<!-- Firebase (Realtime Database) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBOFvYiRzba5xS8KczSaqU0G0TbtBGoe8c",
+  authDomain: "blue-zone-71816.firebaseapp.com",
+  databaseURL: "https://blue-zone-71816-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "blue-zone-71816",
+  storageBucket: "blue-zone-71816.firebasestorage.app",
+  messagingSenderId: "273471219018",
+  appId: "1:273471219018:web:46dde84bc63957ce3d0db3",
+  measurementId: "G-TP93NNVPRF"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const siteDataRef = db.ref('siteData');
+</script>
+
 <script>
 /* ===================== DEFAULT DATA ===================== */
 const ADMIN_PASSWORD = "blue@2026";
-const STORAGE_KEY = "bluezoneSiteData";
 const BLANK_GOLD_AVATAR = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNjAiIGhlaWdodD0iMTYwIj48cmVjdCB3aWR0aD0iMTYwIiBoZWlnaHQ9IjE2MCIgZmlsbD0iIzBlMWYzZCIvPjxjaXJjbGUgY3g9IjgwIiBjeT0iNjIiIHI9IjMwIiBmaWxsPSIjZmZjZjRkIiBvcGFjaXR5PSIwLjg1Ii8+PHJlY3QgeD0iMzAiIHk9IjEwMCIgd2lkdGg9IjEwMCIgaGVpZ2h0PSI3MCIgcng9IjE4IiBmaWxsPSIjZmZjZjRkIiBvcGFjaXR5PSIwLjg1Ii8+PC9zdmc+";
 
 const DEFAULT_DATA = {
@@ -767,23 +785,18 @@ const DEFAULT_DATA = {
   ]
 };
 
-/* ===================== STORAGE ===================== */
-function loadData(){
-  try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if(raw){
-      const parsed = JSON.parse(raw);
-      if(!Array.isArray(parsed.reviews)) parsed.reviews = JSON.parse(JSON.stringify(DEFAULT_DATA.reviews));
-      return parsed;
-    }
-  }catch(e){ console.warn("Could not load saved data, using defaults.", e); }
-  return JSON.parse(JSON.stringify(DEFAULT_DATA));
+/* ===================== STORAGE (Firebase Realtime Database, live for all visitors) ===================== */
+function normalizeData(data){
+  if(!data) return JSON.parse(JSON.stringify(DEFAULT_DATA));
+  if(!Array.isArray(data.reviews)) data.reviews = JSON.parse(JSON.stringify(DEFAULT_DATA.reviews));
+  return data;
 }
 function saveData(data){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  return siteDataRef.set(data);
 }
 
-let siteData = loadData();
+let siteData = JSON.parse(JSON.stringify(DEFAULT_DATA));
+let firebaseSynced = false;
 
 /* ===================== RENDER ===================== */
 function renderAll(data){
@@ -914,8 +927,25 @@ function observeReveals(){
   document.querySelectorAll('.reveal:not(.in)').forEach(el => io.observe(el));
 }
 
-renderAll(siteData);
-observeReveals();
+/* Live sync: fires immediately with current data, then again any time ANY visitor's
+   browser (including the admin panel) writes a change — so everyone sees updates live. */
+siteDataRef.on('value', (snapshot) => {
+  const val = snapshot.val();
+  if(val){
+    siteData = normalizeData(val);
+  } else {
+    // Nothing in the database yet — seed it with the defaults so it exists going forward.
+    siteData = JSON.parse(JSON.stringify(DEFAULT_DATA));
+    siteDataRef.set(siteData).catch(err => console.error('Could not seed live data', err));
+  }
+  renderAll(siteData);
+  if(!firebaseSynced){ firebaseSynced = true; }
+  observeReveals();
+}, (err) => {
+  console.error('Live data unavailable, showing defaults', err);
+  renderAll(siteData);
+  observeReveals();
+});
 
 /* ===================== STAT COUNT-UP ===================== */
 function animateCount(el, target, duration){
@@ -994,12 +1024,11 @@ document.getElementById('submitReview').addEventListener('click', () => {
   const dateLabel = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
 
   siteData.reviews.unshift({ name, rating: selectedReviewRating, text, date: dateLabel });
-  try{
-    saveData(siteData);
-  }catch(err){
-    console.error(err);
-  }
   renderReviews(siteData.reviews);
+  saveData(siteData).catch(err => {
+    console.error(err);
+    showToast('⚠ Could not post review — check your connection.');
+  });
 
   nameEl.value = '';
   textEl.value = '';
@@ -1326,25 +1355,28 @@ document.getElementById('saveAdminChanges').addEventListener('click', () => {
     r.text = document.getElementById(`reviewEditText${idx}`).value.trim();
   });
 
-  try{
-    siteData = editData;
-    saveData(siteData);
-    renderAll(siteData);
-    adminPanelOverlay.classList.remove('open');
-    showToast('✓ Changes saved to this browser');
-  }catch(err){
-    showToast('⚠ Could not save — storage full. Try smaller images.');
+  siteData = editData;
+  renderAll(siteData);
+  adminPanelOverlay.classList.remove('open');
+  saveData(siteData).then(() => {
+    showToast('✓ Changes saved live for all visitors');
+  }).catch(err => {
+    showToast('⚠ Could not save live — check your connection.');
     console.error(err);
-  }
+  });
 });
 
 document.getElementById('resetDefaults').addEventListener('click', () => {
-  if(!confirm('Reset all content back to the original defaults? This clears your saved edits in this browser.')) return;
-  localStorage.removeItem(STORAGE_KEY);
+  if(!confirm('Reset all content back to the original defaults? This resets the live site for every visitor.')) return;
   siteData = JSON.parse(JSON.stringify(DEFAULT_DATA));
   renderAll(siteData);
   adminPanelOverlay.classList.remove('open');
-  showToast('✓ Reset to defaults');
+  saveData(siteData).then(() => {
+    showToast('✓ Reset to defaults');
+  }).catch(err => {
+    showToast('⚠ Could not reset live — check your connection.');
+    console.error(err);
+  });
 });
 
 function showToast(msg){
