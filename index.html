@@ -48,35 +48,16 @@
   nav a:hover::after{ transform: scaleX(1); }
 
   /* ---------------- MOBILE NAV TOGGLE ---------------- */
-  .nav-toggle{ display:none; align-items:center; justify-content:center; width:42px; height:42px; border-radius:11px;
-    background: var(--bg-panel); border:1px solid var(--line); cursor:pointer; padding:0; flex:none; position:relative;
-    transition: border-color .25s ease, background .25s ease, transform .15s ease; }
-  .nav-toggle:hover{ border-color: var(--blue-deep); }
-  .nav-toggle:active{ transform: scale(.92); }
-  .nav-toggle .bars{ position:relative; width:18px; height:13px; }
-  .nav-toggle span{ position:absolute; left:0; width:18px; height:2px; border-radius:2px; background: var(--blue-soft);
-    transition: transform .35s cubic-bezier(.34,1.56,.64,1), opacity .2s ease, top .3s ease, width .3s ease; }
-  .nav-toggle span:nth-child(1){ top:0; }
-  .nav-toggle span:nth-child(2){ top:6px; width:13px; }
-  .nav-toggle span:nth-child(3){ top:12px; }
-  .nav-toggle.active{ background: rgba(53,217,255,0.12); border-color: var(--blue-deep); }
-  .nav-toggle.active span:nth-child(1){ top:6px; transform: rotate(45deg); }
-  .nav-toggle.active span:nth-child(2){ opacity:0; transform: translateX(6px); }
-  .nav-toggle.active span:nth-child(3){ top:6px; width:18px; transform: rotate(-45deg); }
-  .nav-scrim{ display:none; position:fixed; inset:0; background:rgba(3,8,17,0.78); backdrop-filter: blur(4px);
-    opacity:0; transition: opacity .35s ease; z-index:149; }
+  .nav-toggle{ display:none; flex-direction:column; justify-content:center; gap:5px; width:38px; height:38px;
+    background: var(--bg-panel); border:1px solid var(--line); cursor:pointer; padding:0; flex:none; }
+  .nav-toggle span{ display:block; width:18px; height:2px; margin:0 auto; background: var(--blue-soft);
+    transition: transform .3s ease, opacity .2s ease; }
+  .nav-toggle.active span:nth-child(1){ transform: translateY(7px) rotate(45deg); }
+  .nav-toggle.active span:nth-child(2){ opacity:0; }
+  .nav-toggle.active span:nth-child(3){ transform: translateY(-7px) rotate(-45deg); }
+  .nav-scrim{ display:none; position:fixed; inset:0; background:rgba(3,8,17,0.72); backdrop-filter: blur(2px);
+    opacity:0; transition: opacity .3s ease; z-index:99; }
   .nav-scrim.open{ display:block; opacity:1; }
-
-  /* ---------------- MOBILE NAV DRAWER CHROME ---------------- */
-  .nav-panel-head{ display:flex; align-items:center; justify-content:space-between; padding:18px 20px 16px; border-bottom:1px solid var(--line); flex:none; }
-  .nav-panel-title{ font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:2.5px; text-transform:uppercase; color: var(--text-dim); }
-  .nav-close{ width:34px; height:34px; border-radius:9px; border:1px solid var(--line); background: var(--bg); color: var(--text-dim);
-    font-size:18px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center;
-    transition: border-color .2s ease, color .2s ease, transform .25s ease; }
-  .nav-close:hover{ border-color: var(--danger); color: var(--danger); transform: rotate(90deg); }
-  .nav-close:active{ transform: rotate(90deg) scale(.9); }
-  .nav-panel-foot{ padding:14px 18px 20px; border-top:1px solid var(--line); flex:none; }
-  .nav-panel-foot .btn{ width:100%; justify-content:center; }
 
   .btn{ display:inline-flex; align-items:center; gap:8px; font-family:'JetBrains Mono'; font-weight:700; font-size:13px; letter-spacing:.5px;
     padding:12px 22px; text-transform:uppercase; cursor:pointer; border:none; transition: transform .15s ease, box-shadow .15s ease; }
@@ -443,23 +424,12 @@
        so this is where it needs to collapse (previously this only
        happened below 620px, leaving tablet widths ~621-940px broken). */
     .nav-toggle{ display:flex; }
-    nav{ position:fixed; top:0; right:-100%; width:min(86vw,340px); height:100vh; height:100dvh;
-      display:flex; flex-direction:column;
-      background: linear-gradient(180deg, var(--bg-panel) 0%, var(--bg-panel-2) 100%);
-      border-left:1px solid var(--line); box-shadow: -24px 0 60px -20px rgba(0,0,0,0.65);
-      transition: right .4s cubic-bezier(.16,1,.3,1); z-index:150; }
+    nav{ position:fixed; top:0; right:-85%; width:min(80vw,320px); height:100vh; display:block;
+      background: var(--bg-panel); border-left:1px solid var(--line); padding:88px 22px 24px;
+      transition: right .35s cubic-bezier(.34,1.56,.64,1); z-index:100; overflow-y:auto; }
     nav.open{ right:0; }
-    nav ul{ flex:1; overflow-y:auto; flex-direction:column; align-items:stretch; gap:3px; padding:12px; }
-    nav li{ opacity:0; transform:translateX(18px); transition: opacity .3s ease, transform .3s ease; }
-    nav.open li{ opacity:1; transform:translateX(0); transition-delay: calc(var(--i, 0) * 45ms + 100ms); }
-    nav a{ display:flex; align-items:center; gap:13px; padding:13px 14px; border-radius:11px; font-size:14px; position:relative; }
-    nav a svg{ width:18px; height:18px; flex:none; opacity:.75; stroke:currentColor; }
-    nav a::before{ content:""; position:absolute; left:0; top:50%; transform:translateY(-50%); width:3px; height:0;
-      background: var(--blue); border-radius:2px; transition: height .2s ease; }
-    nav a:hover, nav a:focus-visible{ background: rgba(53,217,255,0.09); color: var(--blue-soft); }
-    nav a:hover::before, nav a.active-link::before{ height:58%; }
-    nav a.active-link{ background: rgba(53,217,255,0.11); color: var(--blue-soft); }
-    nav a.active-link svg{ opacity:1; }
+    nav ul{ flex-direction:column; align-items:stretch; gap:2px; }
+    nav a{ display:block; padding:14px 6px; font-size:14px; }
     nav a::after{ display:none; }
   }
   @media (max-width: 620px){
@@ -487,26 +457,19 @@
       <div class="logo-text">BLUE<span>-ZONE</span></div>
     </a>
     <nav id="siteNav">
-      <div class="nav-panel-head">
-        <span class="nav-panel-title">Navigate</span>
-        <button class="nav-close" id="navClose" aria-label="Close navigation menu">&times;</button>
-      </div>
       <ul>
-        <li style="--i:0"><a href="#home"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Home</a></li>
-        <li style="--i:1"><a href="#about"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16v-5"/><path d="M12 8h.01"/></svg>About</a></li>
-        <li style="--i:2"><a href="#team"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c.6-3.6 3.3-6 6.5-6s5.9 2.4 6.5 6"/><circle cx="17.5" cy="8.5" r="2.6"/><path d="M15.5 14.3c2.6.3 4.6 2.4 5.1 5.7"/></svg>BlueX Team</a></li>
-        <li style="--i:3"><a href="#discord"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="12" rx="4"/><path d="M8 12v1"/><path d="M16 12v1"/><path d="M9 4l1.5 3h3L15 4"/></svg>Discord</a></li>
-        <li style="--i:4"><a href="#news"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="15" rx="2"/><path d="M7 9h10"/><path d="M7 13h10"/><path d="M7 17h6"/></svg>News</a></li>
-        <li style="--i:5"><a href="#gallery"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M4 17l5-5 4 4 3-3 4 4"/></svg>Gallery</a></li>
-        <li style="--i:6"><a href="#reviews"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 5.7 6.2.6-4.7 4.2 1.4 6.2L12 16.9l-5.5 2.8 1.4-6.2-4.7-4.2 6.2-.6z"/></svg>Reviews</a></li>
-        <li style="--i:7"><a href="#contact"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>Contact</a></li>
+        <li><a href="#home">Home</a></li>
+        <li><a href="#about">About</a></li>
+        <li><a href="#team">BlueX Team</a></li>
+        <li><a href="#discord">Discord</a></li>
+        <li><a href="#news">News</a></li>
+        <li><a href="#gallery">Gallery</a></li>
+        <li><a href="#reviews">Reviews</a></li>
+        <li><a href="#contact">Contact</a></li>
       </ul>
-      <div class="nav-panel-foot">
-        <a href="#discord" class="btn btn-primary">Join the Community</a>
-      </div>
     </nav>
     <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="siteNav">
-      <span class="bars"><span></span><span></span><span></span></span>
+      <span></span><span></span><span></span>
     </button>
   </div>
   <div class="nav-scrim" id="navScrim"></div>
@@ -1723,59 +1686,25 @@ function showToast(msg){
   const navToggle = document.getElementById('navToggle');
   const siteNav = document.getElementById('siteNav');
   const navScrim = document.getElementById('navScrim');
-  const navClose = document.getElementById('navClose');
   if(!navToggle || !siteNav || !navScrim) return;
 
-  const navLinks = Array.from(siteNav.querySelectorAll('a[href^="#"]'));
-
-  function openNav(){
-    siteNav.classList.add('open');
-    navToggle.classList.add('active');
-    navToggle.setAttribute('aria-expanded', 'true');
-    navScrim.classList.add('open');
-    document.body.style.overflow = 'hidden';
-  }
   function closeNav(){
-    siteNav.classList.remove('open');
     navToggle.classList.remove('active');
     navToggle.setAttribute('aria-expanded', 'false');
+    siteNav.classList.remove('open');
     navScrim.classList.remove('open');
-    document.body.style.overflow = '';
   }
   function toggleNav(){
-    siteNav.classList.contains('open') ? closeNav() : openNav();
+    const isOpen = siteNav.classList.toggle('open');
+    navToggle.classList.toggle('active', isOpen);
+    navToggle.setAttribute('aria-expanded', String(isOpen));
+    navScrim.classList.toggle('open', isOpen);
   }
   navToggle.addEventListener('click', toggleNav);
   navScrim.addEventListener('click', closeNav);
-  if(navClose) navClose.addEventListener('click', closeNav);
-  navLinks.forEach(a => a.addEventListener('click', closeNav));
+  siteNav.querySelectorAll('a').forEach(a => a.addEventListener('click', closeNav));
   document.addEventListener('keydown', (e) => { if(e.key === 'Escape') closeNav(); });
-  window.addEventListener('resize', () => { if(window.innerWidth > 940) closeNav(); });
-
-  /* swipe right on the open drawer to close it */
-  let touchStartX = null;
-  siteNav.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; }, { passive:true });
-  siteNav.addEventListener('touchend', (e) => {
-    if(touchStartX === null) return;
-    const dx = e.changedTouches[0].clientX - touchStartX;
-    if(dx > 60) closeNav();
-    touchStartX = null;
-  }, { passive:true });
-
-  /* highlight the nav link matching the section currently in view */
-  const sections = navLinks
-    .map(a => document.querySelector(a.getAttribute('href')))
-    .filter(Boolean);
-  if(sections.length && 'IntersectionObserver' in window){
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if(!entry.isIntersecting) return;
-        const id = '#' + entry.target.id;
-        navLinks.forEach(a => a.classList.toggle('active-link', a.getAttribute('href') === id));
-      });
-    }, { rootMargin: '-40% 0px -55% 0px', threshold: 0 });
-    sections.forEach(s => io.observe(s));
-  }
+  window.addEventListener('resize', () => { if(window.innerWidth > 620) closeNav(); });
 })();
 
 
