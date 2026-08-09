@@ -10,14 +10,6 @@
 <link rel="canonical" href="https://nilaboygamer01.github.io/BLUE-ZONE/">
 <meta name="theme-color" content="#0b1830">
 
-<!-- PWA -->
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="BLUE-ZONE">
-
 <!-- Open Graph / Facebook -->
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://nilaboygamer01.github.io/BLUE-ZONE/">
@@ -388,13 +380,21 @@
     padding:9px 14px; cursor:pointer; white-space:nowrap; transition: transform .2s ease, border-color .2s ease, color .2s ease; max-width:150px; }
   .user-auth-btn:hover{ border-color: var(--blue); color:#fff; transform: translateY(-1px); }
   .user-auth-icon{ font-size:14px; flex:none; }
+  .user-auth-icon img{ width:18px; height:18px; border-radius:50%; object-fit:cover; display:block; }
   .user-auth-label{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .user-dropdown{ position:absolute; top:calc(100% + 10px); right:0; background: linear-gradient(180deg, var(--bg-panel), var(--bg-panel-2));
     border:1px solid var(--blue-deep); padding:14px; min-width:210px; box-shadow: 0 16px 34px -14px rgba(0,0,0,0.65);
     opacity:0; pointer-events:none; transform: translateY(-8px); transition: opacity .2s ease, transform .2s ease; z-index:110; }
   .user-dropdown.open{ opacity:1; pointer-events:auto; transform:translateY(0); }
-  .user-dropdown-name{ font-size:13.5px; font-weight:700; margin-bottom:2px; }
-  .user-dropdown-email{ font-family:'JetBrains Mono'; font-size:11px; color: var(--text-dim); margin-bottom:12px; word-break:break-all; }
+  .user-dropdown-top{ display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+  .user-dropdown-avatar{ width:42px; height:42px; border-radius:50%; flex:none; overflow:hidden; display:flex; align-items:center; justify-content:center;
+    background: linear-gradient(135deg, rgba(53,217,255,0.18), rgba(47,91,215,0.14)); border:1px solid var(--blue-deep);
+    font-family:'JetBrains Mono'; font-size:13px; font-weight:700; color: var(--blue-soft); }
+  .user-dropdown-avatar img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .user-dropdown-info{ min-width:0; }
+  .user-dropdown-name{ font-size:13.5px; font-weight:700; margin-bottom:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .user-dropdown-email{ font-family:'JetBrains Mono'; font-size:11px; color: var(--text-dim); word-break:break-all; }
+  .user-dropdown-actions{ display:flex; flex-direction:column; gap:8px; }
   @media (max-width:940px){ .user-auth-label{ display:none; } .user-auth-btn{ padding:9px 11px; } }
 
   /* ---------------- USER AUTH (MODAL) ---------------- */
@@ -548,18 +548,23 @@
     </nav>
     <div class="user-menu" id="userMenu">
       <button class="user-auth-btn" id="userAuthBtn" aria-label="Account">
-        <span class="user-auth-icon">👤</span>
+        <span class="user-auth-icon" id="userAuthIcon">👤</span>
         <span class="user-auth-label" id="userAuthLabel">Log In</span>
       </button>
       <div class="user-dropdown" id="userDropdown">
-        <div class="user-dropdown-name" id="userDropdownName"></div>
-        <div class="user-dropdown-email" id="userDropdownEmail"></div>
-        <button class="btn btn-ghost btn-sm" id="userLogoutBtn" style="width:100%; justify-content:center;">Log Out</button>
+        <div class="user-dropdown-top">
+          <div class="user-dropdown-avatar" id="userDropdownAvatar">👤</div>
+          <div class="user-dropdown-info">
+            <div class="user-dropdown-name" id="userDropdownName"></div>
+            <div class="user-dropdown-email" id="userDropdownEmail"></div>
+          </div>
+        </div>
+        <div class="user-dropdown-actions">
+          <button class="btn btn-ghost btn-sm" id="userEditProfileBtn" style="width:100%; justify-content:center;">Edit Profile</button>
+          <button class="btn btn-ghost btn-sm" id="userLogoutBtn" style="width:100%; justify-content:center;">Log Out</button>
+        </div>
       </div>
     </div>
-    <button class="btn btn-ghost btn-sm" id="pwaInstallBtn" type="button" hidden style="margin-left:8px;">
-      ⬇ Install App
-    </button>
     <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="siteNav">
       <span></span><span></span><span></span>
     </button>
@@ -860,6 +865,16 @@
     <!-- SIGN UP VIEW -->
     <div class="auth-view" id="authViewSignup">
       <div class="field">
+        <label>Profile Photo (optional)</label>
+        <div class="avatar-edit-row">
+          <div class="avatar-edit-preview" id="signupAvatarPreview">?</div>
+          <div class="avatar-edit-actions">
+            <label class="btn btn-ghost btn-sm" style="cursor:pointer;">Choose Photo<input type="file" accept="image/*" style="display:none;" id="signupAvatarFile"></label>
+            <button type="button" class="btn btn-ghost btn-sm" id="signupAvatarRemove" style="display:none;">Remove Photo</button>
+          </div>
+        </div>
+      </div>
+      <div class="field">
         <label for="signupName">Display Name</label>
         <input type="text" id="signupName" placeholder="Your name" autocomplete="name">
       </div>
@@ -900,6 +915,34 @@
     </div>
 
     <button class="btn btn-ghost" id="authCancel" style="width:100%; justify-content:center; margin-top:14px;">Close</button>
+  </div>
+</div>
+
+<!-- EDIT PROFILE -->
+<div class="admin-overlay" id="profileOverlay">
+  <div class="admin-box" id="profileBox">
+    <div class="admin-box-icon">👤</div>
+    <h3 class="mono" style="font-family:'Press Start 2P'; font-size:12.5px; margin-bottom:6px;">EDIT PROFILE</h3>
+    <p class="hint" style="text-align:center; margin-top:0;">Update your photo and display name</p>
+
+    <div class="field">
+      <label>Profile Photo</label>
+      <div class="avatar-edit-row">
+        <div class="avatar-edit-preview" id="profileAvatarPreview">?</div>
+        <div class="avatar-edit-actions">
+          <label class="btn btn-ghost btn-sm" style="cursor:pointer;">Choose Photo<input type="file" accept="image/*" style="display:none;" id="profileAvatarFile"></label>
+          <button type="button" class="btn btn-ghost btn-sm" id="profileAvatarRemove" style="display:none;">Remove Photo</button>
+        </div>
+      </div>
+    </div>
+    <div class="field">
+      <label for="profileName">Display Name</label>
+      <input type="text" id="profileName" placeholder="Your name" autocomplete="name">
+    </div>
+    <div class="error-msg" id="profileError"></div>
+    <div class="success-msg" id="profileSuccess"></div>
+    <button class="btn btn-primary" id="profileSave" style="width:100%; justify-content:center; margin-top:6px;">Save Changes</button>
+    <button class="btn btn-ghost" id="profileCancel" style="width:100%; justify-content:center; margin-top:10px;">Cancel</button>
   </div>
 </div>
 
@@ -1051,6 +1094,10 @@ const auth = getAuth(fbApp);
 const siteMetaRef = ref(db, 'siteMeta');
 const galleryRef = ref(db, 'gallery');
 const applicationsRef = ref(db, 'applications');
+// Per-user profile data (display name + profile photo, base64) keyed by uid.
+// Kept separate from Firebase Auth's own profile fields since a photo data
+// URL is far larger than Auth's photoURL field comfortably supports.
+const usersRef = ref(db, 'users');
 // Legacy path used before the siteMeta/gallery split — real site content may
 // still be sitting here and needs to be migrated forward, not overwritten.
 const legacySiteDataRef = ref(db, 'siteData');
@@ -1705,6 +1752,8 @@ const userMenu = document.getElementById('userMenu');
 const userDropdown = document.getElementById('userDropdown');
 const userDropdownName = document.getElementById('userDropdownName');
 const userDropdownEmail = document.getElementById('userDropdownEmail');
+const userAuthIcon = document.getElementById('userAuthIcon');
+const userDropdownAvatar = document.getElementById('userDropdownAvatar');
 
 function clearAuthMessages(){
   ['loginError','loginSuccess','signupError','signupSuccess','forgotError','forgotSuccess'].forEach(id => {
@@ -1732,8 +1781,34 @@ function switchAuthTab(tab){
 function openAuthOverlay(tab){
   authOverlay.classList.add('open');
   switchAuthTab(tab || 'login');
+  resetSignupAvatar();
 }
 function closeAuthOverlay(){ authOverlay.classList.remove('open'); }
+
+/* ---- Sign-up profile photo picker ---- */
+let signupAvatarData = ''; // base64 data URL, empty if none chosen
+const signupAvatarPreview = document.getElementById('signupAvatarPreview');
+const signupAvatarFile = document.getElementById('signupAvatarFile');
+const signupAvatarRemove = document.getElementById('signupAvatarRemove');
+
+function resetSignupAvatar(){
+  signupAvatarData = '';
+  signupAvatarFile.value = '';
+  signupAvatarPreview.innerHTML = '?';
+  signupAvatarRemove.style.display = 'none';
+}
+signupAvatarFile.addEventListener('change', async () => {
+  const file = signupAvatarFile.files[0];
+  if(!file) return;
+  try{
+    signupAvatarData = await compressImageFile(file, 300, 0.8);
+    signupAvatarPreview.innerHTML = `<img src="${signupAvatarData}" alt="">`;
+    signupAvatarRemove.style.display = '';
+  }catch(err){
+    setMsg('signupError', err.message || 'Could not read that image.');
+  }
+});
+signupAvatarRemove.addEventListener('click', resetSignupAvatar);
 
 document.querySelectorAll('.auth-tab').forEach(t => t.addEventListener('click', () => switchAuthTab(t.dataset.authtab)));
 document.getElementById('showForgotPassword').addEventListener('click', () => switchAuthTab('forgot'));
@@ -1811,6 +1886,8 @@ document.getElementById('signupSubmit').addEventListener('click', async () => {
     await setPersistence(auth, browserLocalPersistence);
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(cred.user, { displayName: name });
+    await set(ref(db, 'users/' + cred.user.uid), { displayName: name, photo: signupAvatarData || '' });
+    resetSignupAvatar();
     setMsg('signupSuccess','✓ Account created! Welcome to BLUE-ZONE.');
     setTimeout(closeAuthOverlay, 900);
   }catch(err){
@@ -1854,6 +1931,38 @@ document.getElementById('userLogoutBtn').addEventListener('click', async () => {
   showToast('✓ Logged out');
 });
 
+// Renders the current user's photo (or initials fallback) in both the nav
+// button and the dropdown header.
+let currentUserPhoto = '';
+function renderUserAvatar(photo, name){
+  currentUserPhoto = photo || '';
+  if(photo){
+    userAuthIcon.innerHTML = `<img src="${photo}" alt="">`;
+    userDropdownAvatar.innerHTML = `<img src="${photo}" alt="">`;
+  } else {
+    userAuthIcon.textContent = '👤';
+    userDropdownAvatar.textContent = name ? initials(name) : '👤';
+  }
+}
+
+// Live subscription to this user's profile node (name + photo), so avatar/
+// name updates made from another tab or device show up here too.
+let unsubUserProfile = null;
+function subscribeUserProfile(uid){
+  if(unsubUserProfile) unsubUserProfile();
+  unsubUserProfile = onValue(ref(db, 'users/' + uid), snap => {
+    const profile = snap.val() || {};
+    const user = auth.currentUser;
+    if(!user) return;
+    const name = profile.displayName || user.displayName || (user.email ? user.email.split('@')[0] : 'Member');
+    userAuthLabel.textContent = name;
+    userAuthBtn.title = name;
+    userDropdownName.textContent = name;
+    userDropdownEmail.textContent = user.email || '';
+    renderUserAvatar(profile.photo || '', name);
+  });
+}
+
 onAuthStateChanged(auth, user => {
   if(user){
     const name = user.displayName || (user.email ? user.email.split('@')[0] : 'Member');
@@ -1861,11 +1970,81 @@ onAuthStateChanged(auth, user => {
     userAuthBtn.title = name;
     userDropdownName.textContent = name;
     userDropdownEmail.textContent = user.email || '';
+    renderUserAvatar('', name);
+    subscribeUserProfile(user.uid);
   } else {
+    if(unsubUserProfile){ unsubUserProfile(); unsubUserProfile = null; }
     userAuthLabel.textContent = 'Log In';
     userAuthBtn.title = '';
     userDropdownName.textContent = '';
     userDropdownEmail.textContent = '';
+    renderUserAvatar('', '');
+  }
+});
+
+/* ---- Edit Profile overlay ---- */
+const profileOverlay = document.getElementById('profileOverlay');
+const profileAvatarPreview = document.getElementById('profileAvatarPreview');
+const profileAvatarFile = document.getElementById('profileAvatarFile');
+const profileAvatarRemove = document.getElementById('profileAvatarRemove');
+const profileName = document.getElementById('profileName');
+let profileAvatarData = ''; // current photo shown/selected in the editor
+
+function setProfilePreview(photo, name){
+  profileAvatarData = photo || '';
+  if(profileAvatarData){
+    profileAvatarPreview.innerHTML = `<img src="${profileAvatarData}" alt="">`;
+    profileAvatarRemove.style.display = '';
+  } else {
+    profileAvatarPreview.innerHTML = name ? initials(name) : '?';
+    profileAvatarRemove.style.display = 'none';
+  }
+}
+
+document.getElementById('userEditProfileBtn').addEventListener('click', () => {
+  if(!auth.currentUser) return;
+  userDropdown.classList.remove('open');
+  document.getElementById('profileError').textContent = '';
+  document.getElementById('profileError').classList.remove('show');
+  document.getElementById('profileSuccess').textContent = '';
+  document.getElementById('profileSuccess').classList.remove('show');
+  profileName.value = userDropdownName.textContent || auth.currentUser.displayName || '';
+  setProfilePreview(currentUserPhoto, profileName.value);
+  profileOverlay.classList.add('open');
+});
+document.getElementById('profileCancel').addEventListener('click', () => profileOverlay.classList.remove('open'));
+profileOverlay.addEventListener('click', e => { if(e.target === profileOverlay) profileOverlay.classList.remove('open'); });
+
+profileAvatarFile.addEventListener('change', async () => {
+  const file = profileAvatarFile.files[0];
+  if(!file) return;
+  try{
+    const data = await compressImageFile(file, 300, 0.8);
+    setProfilePreview(data, profileName.value);
+  }catch(err){
+    setMsg('profileError', err.message || 'Could not read that image.');
+  }
+  profileAvatarFile.value = '';
+});
+profileAvatarRemove.addEventListener('click', () => setProfilePreview('', profileName.value));
+
+document.getElementById('profileSave').addEventListener('click', async () => {
+  const user = auth.currentUser;
+  if(!user) return;
+  const name = profileName.value.trim();
+  setMsg('profileError',''); setMsg('profileSuccess','');
+  if(!name){ setMsg('profileError','Please enter a display name.'); return; }
+  const btn = document.getElementById('profileSave');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try{
+    await updateProfile(user, { displayName: name });
+    await set(ref(db, 'users/' + user.uid), { displayName: name, photo: profileAvatarData || '' });
+    setMsg('profileSuccess','✓ Profile updated.');
+    setTimeout(() => profileOverlay.classList.remove('open'), 800);
+  }catch(err){
+    setMsg('profileError', friendlyAuthError(err));
+  }finally{
+    btn.disabled = false; btn.textContent = 'Save Changes';
   }
 });
 
@@ -2414,66 +2593,5 @@ setTimeout(hidePageLoader, PAGE_LOADER_MAX_MS);
 })();
 </script>
 
-<!-- ===================== PWA: install + service worker ===================== -->
-<script>
-(function () {
-  'use strict';
-
-  // ---- Register the service worker ----
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('service-worker.js')
-        .then((reg) => {
-          console.log('[PWA] Service worker registered:', reg.scope);
-        })
-        .catch((err) => {
-          console.warn('[PWA] Service worker registration failed:', err);
-        });
-    });
-  }
-
-  // ---- Custom "Install App" button ----
-  // Browsers that support installable PWAs fire 'beforeinstallprompt'.
-  // We stash the event, reveal our button, and trigger the native prompt
-  // when the user clicks it — instead of relying on the browser's own
-  // (often hidden) install UI.
-  let deferredInstallPrompt = null;
-  const installBtn = document.getElementById('pwaInstallBtn');
-
-  window.addEventListener('beforeinstallprompt', (event) => {
-    event.preventDefault();
-    deferredInstallPrompt = event;
-    if (installBtn) installBtn.hidden = false;
-  });
-
-  if (installBtn) {
-    installBtn.addEventListener('click', async () => {
-      if (!deferredInstallPrompt) return;
-      installBtn.hidden = true;
-      deferredInstallPrompt.prompt();
-      try {
-        const { outcome } = await deferredInstallPrompt.userChoice;
-        console.log('[PWA] Install prompt outcome:', outcome);
-      } catch (err) {
-        console.warn('[PWA] Install prompt error:', err);
-      }
-      deferredInstallPrompt = null;
-    });
-  }
-
-  // Hide the button once the app has actually been installed.
-  window.addEventListener('appinstalled', () => {
-    deferredInstallPrompt = null;
-    if (installBtn) installBtn.hidden = true;
-    console.log('[PWA] App installed.');
-  });
-
-  // If already running standalone (installed), no need to show the button.
-  const isStandalone =
-    window.matchMedia('(display-mode: standalone)').matches ||
-    window.navigator.standalone === true;
-  if (isStandalone && installBtn) installBtn.hidden = true;
-})();
-</script>
 </body>
 </html>
