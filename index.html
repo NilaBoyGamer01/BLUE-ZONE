@@ -196,6 +196,15 @@
   .member-bio{ font-size:13.5px; color: var(--text-dim); margin-top:14px; max-width:32ch; }
   .member-handle{ font-family:'JetBrains Mono'; font-size:12px; color: var(--text-dim); margin-top:16px; padding-top:14px; border-top:1px solid var(--line); width:100%; }
 
+  /* ---------------- ADMIN: TEAM AVATAR EDITOR ---------------- */
+  .avatar-edit-row{ display:flex; align-items:center; gap:16px; margin-bottom:18px; }
+  .avatar-edit-preview{ width:64px; height:64px; border-radius:50%; flex:none; overflow:hidden; position:relative;
+    display:flex; align-items:center; justify-content:center; background: linear-gradient(135deg, var(--blue-dark), var(--lapis));
+    font-family:'Press Start 2P'; font-size:16px; color: var(--blue-soft); box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px var(--blue-deep); }
+  .avatar-edit-preview img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .avatar-edit-actions{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+
+
   /* ---------------- DISCORD ---------------- */
   .discord-panel{ background: linear-gradient(135deg, rgba(30,99,201,0.12), rgba(53,217,255,0.05)); border:1px solid var(--blue-deep);
     padding:38px; display:grid; grid-template-columns:1.1fr .9fr; gap:38px; align-items:center; }
@@ -764,7 +773,7 @@
       </div>
     </div>
     <div class="admin-foot">
-      <span class="save-hint">Changes save for every visitor of this browser</span>
+      <span class="save-hint">Changes save live for every visitor of the site</span>
       <div class="admin-foot-actions">
         <button class="btn btn-danger btn-sm" id="resetDefaults">Reset to Default</button>
         <button class="btn btn-primary" id="saveAdminChanges">Save Changes</button>
@@ -799,10 +808,24 @@ const db = getDatabase(fbApp);
 // in the background so it never blocks the rest of the site.
 const siteMetaRef = ref(db, 'siteMeta');
 const galleryRef = ref(db, 'gallery');
+// Legacy path used before the siteMeta/gallery split — real site content may
+// still be sitting here and needs to be migrated forward, not overwritten.
+const legacySiteDataRef = ref(db, 'siteData');
 function withoutGallery(data){
   const copy = JSON.parse(JSON.stringify(data));
   delete copy.gallery;
   return copy;
+}
+// Fetch the legacy node once and share the result between loadSiteMeta()
+// and loadGallery() so we don't hit it twice.
+let legacyDataPromise = null;
+function getLegacyData(){
+  if(!legacyDataPromise){
+    legacyDataPromise = get(legacySiteDataRef)
+      .then(snap => snap.exists() ? snap.val() : null)
+      .catch(e => { console.error('Legacy data check failed:', e); return null; });
+  }
+  return legacyDataPromise;
 }
 
 /* ===================== DEFAULT DATA ===================== */
@@ -858,11 +881,13 @@ async function loadSiteMeta(){
     const snapshot = await get(siteMetaRef);
     if(snapshot.exists()){
       return snapshot.val();
-    } else {
-      const seed = withoutGallery(DEFAULT_DATA);
-      await set(siteMetaRef, seed);
-      return seed;
     }
+    // Nothing at the new path yet — check for real content left over at the
+    // old pre-split path before falling back to generic placeholder defaults.
+    const legacy = await getLegacyData();
+    const seed = legacy ? withoutGallery(legacy) : withoutGallery(DEFAULT_DATA);
+    await set(siteMetaRef, seed);
+    return seed;
   }catch(e){
     console.error('Firebase load failed, falling back to local defaults:', e);
     return withoutGallery(DEFAULT_DATA);
@@ -874,8 +899,10 @@ async function loadGallery(){
   try{
     const snapshot = await get(galleryRef);
     if(snapshot.exists()) return snapshot.val();
-    await set(galleryRef, DEFAULT_DATA.gallery);
-    return JSON.parse(JSON.stringify(DEFAULT_DATA.gallery));
+    const legacy = await getLegacyData();
+    const seed = (legacy && legacy.gallery) ? legacy.gallery : DEFAULT_DATA.gallery;
+    await set(galleryRef, seed);
+    return JSON.parse(JSON.stringify(seed));
   }catch(e){
     console.error('Firebase gallery load failed:', e);
     return [];
@@ -1238,6 +1265,13 @@ function renderTeamEdit(){
       <div class="edit-card-head"><div class="card-title"><span class="card-num">${i+1}</span>Team member</div>
       <button class="remove-btn-icon" data-remove-team="${i}">Remove</button></div>
       <div class="edit-card-body">
+        <div class="avatar-edit-row">
+          <div class="avatar-edit-preview">${m.avatar ? `<img src="${m.avatar}" alt="">` : initials(m.name)}</div>
+          <div class="avatar-edit-actions">
+            <label class="btn btn-ghost btn-sm" style="cursor:pointer;">Choose Photo<input type="file" accept="image/*" style="display:none;" data-team-avatar-file="${i}"></label>
+            ${m.avatar ? `<button class="btn btn-ghost btn-sm" data-remove-avatar="${i}">Remove Photo</button>` : ''}
+          </div>
+        </div>
         <div class="field-row">
           <div class="field"><label>Name</label><input type="text" data-team="${i}" data-field="name" value="${escapeHtml(m.name)}"></div>
           <div class="field"><label>Role</label><input type="text" data-team="${i}" data-field="role" value="${escapeHtml(m.role)}"></div>
@@ -1249,10 +1283,33 @@ function renderTeamEdit(){
         </label>
       </div>
     </div>`).join('');
-  list.querySelectorAll('input,textarea').forEach(el => {
+  list.querySelectorAll('input[type=text],textarea,input[type=checkbox]').forEach(el => {
     el.addEventListener('input', () => {
       const i = el.dataset.team, f = el.dataset.field;
       siteData.team[i][f] = el.type === 'checkbox' ? el.checked : el.value;
+      if(f === 'name'){
+        // Keep the initials fallback in the avatar preview in sync while typing.
+        const preview = list.querySelectorAll('.avatar-edit-preview')[i];
+        if(preview && !siteData.team[i].avatar) preview.textContent = initials(el.value);
+      }
+    });
+  });
+  list.querySelectorAll('[data-team-avatar-file]').forEach(fileInput => {
+    fileInput.addEventListener('change', async e => {
+      const file = e.target.files[0]; if(!file) return;
+      try{
+        siteData.team[fileInput.dataset.teamAvatarFile].avatar = await compressImageFile(file, 400, 0.8);
+        renderTeamEdit();
+      }catch(err){
+        console.error(err);
+        alert(err.message || 'Could not process that photo.');
+      }
+    });
+  });
+  list.querySelectorAll('[data-remove-avatar]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      siteData.team[btn.dataset.removeAvatar].avatar = '';
+      renderTeamEdit();
     });
   });
   list.querySelectorAll('[data-remove-team]').forEach(btn => {
