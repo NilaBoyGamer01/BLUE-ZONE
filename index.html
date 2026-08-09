@@ -82,7 +82,8 @@
       background:none; border:none; color: var(--text-dim); padding:6px 2px; cursor:pointer;
       font-family:'JetBrains Mono'; font-size:10px; letter-spacing:.2px; text-transform:uppercase;
       transition: color .2s ease; min-width:0; }
-    .bottom-nav-link .bn-icon{ font-size:19px; line-height:1; }
+    .bottom-nav-link .bn-icon{ font-size:19px; line-height:1; display:flex; }
+    .bottom-nav-link .bn-icon svg{ width:20px; height:20px; }
     .bottom-nav-link span:last-child{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
     .bottom-nav-link.active{ color: var(--blue-soft); }
     .bottom-nav-link.active .bn-icon{ filter: drop-shadow(0 0 6px rgba(53,217,255,0.65)); }
@@ -633,11 +634,26 @@
 </main>
 
 <nav class="bottom-nav" id="bottomNav" aria-label="Mobile primary navigation">
-  <button class="bottom-nav-link active" data-tab="home"><span class="bn-icon">🏠</span><span>Home</span></button>
-  <button class="bottom-nav-link" data-tab="team"><span class="bn-icon">👥</span><span>Team</span></button>
-  <button class="bottom-nav-link" data-tab="gallery"><span class="bn-icon">🖼</span><span>Gallery</span></button>
-  <button class="bottom-nav-link" data-tab="reviews"><span class="bn-icon">⭐</span><span>Reviews</span></button>
-  <button class="bottom-nav-link" data-tab="discord"><span class="bn-icon">💬</span><span>Discord</span></button>
+  <button class="bottom-nav-link active" data-tab="home">
+    <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9a1 1 0 0 0 1 1H9a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h2.5a1 1 0 0 0 1-1v-9"/></svg></span>
+    <span>Home</span>
+  </button>
+  <button class="bottom-nav-link" data-tab="team">
+    <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><circle cx="17.5" cy="9" r="2.3"/><path d="M15.7 14.6c2.6.2 4.8 2.2 4.8 5.4"/></svg></span>
+    <span>Team</span>
+  </button>
+  <button class="bottom-nav-link" data-tab="gallery">
+    <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="10" r="1.7"/><path d="m4 17 5-4.5 3.5 3 3-2.5L20.5 17.5"/></svg></span>
+    <span>Gallery</span>
+  </button>
+  <button class="bottom-nav-link" data-tab="reviews">
+    <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="m12 4 2.4 5 5.6.6-4.2 3.8 1.2 5.5L12 16.3 6.9 18.9l1.2-5.5-4.2-3.8 5.6-.6z"/></svg></span>
+    <span>Reviews</span>
+  </button>
+  <button class="bottom-nav-link" data-tab="discord">
+    <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19V7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9l-4 4Z"/></svg></span>
+    <span>Discord</span>
+  </button>
 </nav>
 
 <div class="lightbox" id="lightbox">
