@@ -895,7 +895,6 @@ const legacySiteDataRef = ref(db, 'siteData');
 // Admin security: activity log + login-attempt tracking, both shared via Firebase
 // so they're visible to any admin, not just the browser that triggered them.
 const adminLogsRef = ref(db, 'adminLogs');
-const loginAttemptsRef = ref(db, 'adminSecurity/loginAttempts');
 function withoutGallery(data){
   const copy = JSON.parse(JSON.stringify(data));
   delete copy.gallery;
@@ -1536,16 +1535,22 @@ document.getElementById('adminLoginCancel').addEventListener('click', () => admi
 document.getElementById('adminLoginSubmit').addEventListener('click', attemptLogin);
 document.getElementById('adminPassword').addEventListener('keydown', e => { if(e.key === 'Enter') attemptLogin(); });
 
+const LOGIN_STATE_KEY = 'bz_admin_login_state';
 async function getLoginState(){
   try{
-    const snap = await get(loginAttemptsRef);
-    return snap.exists() ? snap.val() : { count: 0, lockedUntil: 0 };
+    const raw = localStorage.getItem(LOGIN_STATE_KEY);
+    return raw ? JSON.parse(raw) : { count: 0, lockedUntil: 0 };
   }catch(e){
+    console.error('Reading login state failed:', e);
     return { count: 0, lockedUntil: 0 };
   }
 }
 async function setLoginState(state){
-  try{ await set(loginAttemptsRef, state); }catch(e){}
+  try{
+    localStorage.setItem(LOGIN_STATE_KEY, JSON.stringify(state));
+  }catch(e){
+    console.error('Saving login state failed (localStorage unavailable/full):', e);
+  }
 }
 function fmtRemaining(ms){
   const s = Math.max(0, Math.ceil(ms / 1000));
