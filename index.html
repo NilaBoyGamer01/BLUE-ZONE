@@ -98,6 +98,7 @@
   .btn{ position:relative; overflow:hidden; display:inline-flex; align-items:center; gap:8px; font-family:'JetBrains Mono'; font-weight:700; font-size:13px; letter-spacing:.5px;
     padding:12px 22px; text-transform:uppercase; cursor:pointer; border:none; transition: transform .15s ease, box-shadow .15s ease; }
   .btn:active{ transform: scale(.95); }
+  .btn:disabled{ opacity:.35; cursor:not-allowed; pointer-events:none; }
   .btn-primary{ background: linear-gradient(135deg, var(--blue), var(--lapis)); color:#04101e; box-shadow: 0 0 0 1px rgba(53,217,255,0.35); }
   .btn-primary:hover{ transform: translateY(-2px); box-shadow: 0 0 0 1px rgba(53,217,255,0.5), 0 10px 22px -8px rgba(53,217,255,0.55); }
   .btn-ghost{ background:transparent; color: var(--text); border:1px solid var(--line); }
@@ -301,6 +302,30 @@
   .star-picker button.filled{ color: var(--gold); }
   .review-form-msg{ font-family:'JetBrains Mono'; font-size:12px; color: var(--emerald); margin-top:12px; display:none; }
   .review-form-msg.show{ display:block; }
+
+  /* ---------------- APPLICATIONS / STATUS PILLS ---------------- */
+  .status-pill{ display:inline-flex; align-items:center; gap:7px; font-family:'JetBrains Mono'; font-size:10.5px; text-transform:uppercase;
+    letter-spacing:.6px; padding:5px 12px; border:1px solid var(--line); flex:none; white-space:nowrap; }
+  .status-pill .status-dot{ width:8px; height:8px; border-radius:50%; flex:none; }
+  .status-pill.status-pending{ color: var(--gold); border-color: var(--gold); }
+  .status-pill.status-pending .status-dot{ background: var(--gold); box-shadow: 0 0 6px var(--gold); animation: statusDotPulse 1.8s ease-in-out infinite; }
+  .status-pill.status-approved{ color: var(--emerald); border-color: var(--emerald); }
+  .status-pill.status-approved .status-dot{ background: var(--emerald); box-shadow: 0 0 6px var(--emerald); }
+  .status-pill.status-rejected{ color: var(--danger); border-color: var(--danger); }
+  .status-pill.status-rejected .status-dot{ background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+  @keyframes statusDotPulse{ 0%,100%{ opacity:1; } 50%{ opacity:.35; } }
+  .my-app-card{ background: var(--bg-panel); border:1px solid var(--line); padding:16px 18px; margin-bottom:10px;
+    display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; }
+  .my-app-card-info b{ display:block; font-size:14px; }
+  .my-app-card-info span{ font-size:12px; color: var(--text-dim); }
+  .admin-tab-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:16px; height:16px; padding:0 4px; margin-left:6px;
+    background: var(--gold); color:#241a00; font-size:10px; font-weight:700; border-radius:20px; }
+  .app-edit-card-body .field-row{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .app-detail{ margin-bottom:14px; }
+  .app-detail label{ display:block; font-family:'JetBrains Mono'; font-size:11px; text-transform:uppercase; letter-spacing:.5px; color: var(--text-dim); margin-bottom:4px; }
+  .app-detail p{ font-size:13.5px; color: var(--text); }
+  .app-status-row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:14px; padding-top:14px; border-top:1px solid var(--line); }
+  .app-status-actions{ display:flex; gap:8px; flex-wrap:wrap; margin-left:auto; }
 
   .field{ margin-bottom:16px; }
   .field label{ display:block; font-family:'JetBrains Mono'; font-size:11px; text-transform:uppercase; letter-spacing:.5px; color: var(--text-dim); margin-bottom:6px; }
@@ -518,6 +543,25 @@
       <p id="teamSubtitle">Seven players who keep the server, the events and the Discord running — say hi in #announcements.</p>
     </div>
     <div class="team-grid" id="teamGrid"></div>
+
+    <div class="review-form reveal" id="joinTeamForm" style="margin-top:34px;">
+      <h3>JOIN OUR TEAM</h3>
+      <p class="gallery-hint" style="margin-bottom:18px;">Think you'd be a good fit for BlueX Team? Send us your application below.</p>
+      <div class="field"><label>Your Name / IGN</label><input type="text" id="joinName" placeholder="e.g. Notch_Fan22" maxlength="40"></div>
+      <div class="field"><label>Discord Handle</label><input type="text" id="joinDiscord" placeholder="e.g. @yourname" maxlength="40"></div>
+      <div class="field"><label>Role You're Interested In</label><input type="text" id="joinRole" placeholder="e.g. Moderator, Builder, PvP Warrior" maxlength="40"></div>
+      <div class="field"><label>Experience</label><textarea id="joinExperience" placeholder="Past servers, roles, or skills you'd bring." maxlength="500"></textarea></div>
+      <div class="field"><label>Why do you want to join? (optional)</label><textarea id="joinMessage" placeholder="Tell us a bit about yourself." maxlength="500"></textarea></div>
+      <div class="error-msg" id="joinFormError">Please add your name, Discord handle, and the role you're interested in.</div>
+      <button class="btn btn-primary" id="submitJoinApplication">Submit Application</button>
+      <p class="review-form-msg" id="joinFormMsg">✓ Thanks — your application is in! Check its status below anytime.</p>
+      <p class="hint" style="margin-top:14px;">Applications are reviewed by the BlueX Team. Approved applicants are added straight to the team list.</p>
+    </div>
+
+    <div class="reveal" id="myApplicationsBlock" style="margin-top:28px; display:none;">
+      <h3 style="font-family:'JetBrains Mono'; font-size:12px; letter-spacing:1px; text-transform:uppercase; color:var(--blue-soft); margin-bottom:12px;">Your Applications</h3>
+      <div id="myApplicationsList"></div>
+    </div>
   </section>
 
   <!-- DISCORD -->
@@ -735,6 +779,7 @@
       <div class="admin-tabs">
         <button class="admin-tab active" data-atab="page"><span>📝</span><span>Page Content</span></button>
         <button class="admin-tab" data-atab="team"><span>👥</span><span>Team</span></button>
+        <button class="admin-tab" data-atab="applications"><span>📋</span><span>Applications<span class="admin-tab-badge" id="pendingAppBadge" style="display:none;"></span></span></button>
         <button class="admin-tab" data-atab="gallery"><span>🖼</span><span>Gallery</span></button>
         <button class="admin-tab" data-atab="news"><span>📰</span><span>News</span></button>
         <button class="admin-tab" data-atab="reviews"><span>⭐</span><span>Reviews</span></button>
@@ -771,6 +816,11 @@
           <div class="tab-toolbar"><p class="hint">One card per team member — edit details or remove below.</p></div>
           <div id="teamEditList"></div>
           <button class="btn btn-ghost btn-sm" id="addTeamMember">+ Add Team Member</button>
+        </div>
+
+        <div class="admin-pane" id="apane-applications">
+          <div class="tab-toolbar"><p class="hint">Review applications, then approve or reject. Approving adds them straight to the Team.</p></div>
+          <div id="applicationsEditList"></div>
         </div>
 
         <div class="admin-pane" id="apane-gallery">
@@ -829,12 +879,14 @@ const db = getDatabase(fbApp);
 // in the background so it never blocks the rest of the site.
 const siteMetaRef = ref(db, 'siteMeta');
 const galleryRef = ref(db, 'gallery');
+const applicationsRef = ref(db, 'applications');
 // Legacy path used before the siteMeta/gallery split — real site content may
 // still be sitting here and needs to be migrated forward, not overwritten.
 const legacySiteDataRef = ref(db, 'siteData');
 function withoutGallery(data){
   const copy = JSON.parse(JSON.stringify(data));
   delete copy.gallery;
+  delete copy.applications;
   return copy;
 }
 // Fetch the legacy node once and share the result between loadSiteMeta()
@@ -888,6 +940,7 @@ const DEFAULT_DATA = {
     { date_day:"28", date_mon:"JUL", title:"Weekend build contest results", body:"Congrats to this month's top three builders — winners posted in #showcase." }
   ],
   gallery: [],
+  applications: [],
   reviews: [
     { name:"Notch_Fan22", stars:5, text:"Been here since day one — best small Minecraft community I've found.", date:"Jul 2026" }
   ]
@@ -945,6 +998,19 @@ async function loadGallery(){
   }
 }
 
+// Load team applications separately too — same reasoning as gallery.
+async function loadApplications(){
+  try{
+    const snapshot = await get(applicationsRef);
+    if(snapshot.exists()) return snapshot.val();
+    await set(applicationsRef, []);
+    return [];
+  }catch(e){
+    console.error('Firebase applications load failed:', e);
+    return [];
+  }
+}
+
 // Save everything except gallery photos (hero, stats, about, team, news, reviews).
 async function saveSiteMeta(){
   try{
@@ -969,6 +1035,18 @@ async function saveGalleryData(){
   }
 }
 
+// Save just the team applications.
+async function saveApplicationsData(){
+  try{
+    await set(applicationsRef, siteData.applications);
+    return true;
+  }catch(e){
+    console.error('Firebase applications save failed:', e);
+    showToast('⚠ Could not save — check your connection');
+    return false;
+  }
+}
+
 // Keep this tab in sync if content changes elsewhere (another admin editing,
 // or another open tab). Site text and gallery are watched independently so a
 // new photo elsewhere doesn't re-render the whole page unnecessarily.
@@ -982,6 +1060,12 @@ onValue(galleryRef, (snapshot) => {
   siteData.gallery = snapshot.exists() ? snapshot.val() : [];
   renderGallery();
   if(adminPanelOverlay.classList.contains('open')) renderGalleryEdit();
+});
+onValue(applicationsRef, (snapshot) => {
+  siteData.applications = snapshot.exists() ? snapshot.val() : [];
+  renderMyApplications();
+  updatePendingAppBadge();
+  if(adminPanelOverlay.classList.contains('open')) renderApplicationsEdit();
 });
 
 /* ===================== IMAGE COMPRESSION ===================== */
@@ -1093,6 +1177,8 @@ function renderAll(){
 
   renderGallery();
   renderReviews();
+  renderMyApplications();
+  updatePendingAppBadge();
 }
 function initials(name){
   return (name || '?').trim().split(/\s+/).map(w => w[0]).slice(0,2).join('').toUpperCase();
@@ -1176,6 +1262,49 @@ function showToast(msg){
   setTimeout(() => t.classList.remove('show'), 2200);
 }
 
+/* ===================== TEAM APPLICATIONS ===================== */
+// Applications are visible to admins in Firebase, but a visitor's OWN list
+// of "my applications" is tracked locally in this browser (there are no
+// visitor accounts on this static site), same spirit as the client-side
+// admin lock already used elsewhere.
+const MY_APPS_KEY = 'blueZoneMyApplicationIds';
+function getMyApplicationIds(){
+  try{ return JSON.parse(localStorage.getItem(MY_APPS_KEY) || '[]'); }
+  catch(e){ return []; }
+}
+function addMyApplicationId(id){
+  const ids = getMyApplicationIds();
+  ids.unshift(id);
+  try{ localStorage.setItem(MY_APPS_KEY, JSON.stringify(ids)); }catch(e){ /* storage unavailable — status widget just won't persist */ }
+}
+function newApplicationId(){
+  return (crypto.randomUUID ? crypto.randomUUID() : 'app_' + Date.now() + '_' + Math.random().toString(36).slice(2));
+}
+const STATUS_LABEL = { pending:'Pending Review', approved:'Approved', rejected:'Not Approved' };
+function statusPill(status){
+  const s = STATUS_LABEL[status] ? status : 'pending';
+  return `<span class="status-pill status-${s}"><span class="status-dot"></span>${STATUS_LABEL[s]}</span>`;
+}
+function renderMyApplications(){
+  const block = document.getElementById('myApplicationsBlock');
+  const list = document.getElementById('myApplicationsList');
+  const myIds = getMyApplicationIds();
+  const mine = siteData.applications.filter(a => myIds.includes(a.id));
+  if(!mine.length){ block.style.display = 'none'; return; }
+  block.style.display = 'block';
+  list.innerHTML = mine.map(a => `
+    <div class="my-app-card">
+      <div class="my-app-card-info"><b>${escapeHtml(a.role)}</b><span>Submitted ${escapeHtml(a.date)}</span></div>
+      ${statusPill(a.status)}
+    </div>`).join('');
+}
+function updatePendingAppBadge(){
+  const badge = document.getElementById('pendingAppBadge');
+  const count = siteData.applications.filter(a => (a.status || 'pending') === 'pending').length;
+  if(count > 0){ badge.textContent = count; badge.style.display = 'inline-flex'; }
+  else{ badge.style.display = 'none'; }
+}
+
 /* ===================== GALLERY UPLOAD ===================== */
 let pendingGalleryImg = null;
 const GAL_UPLOAD_DEFAULT_ERROR = document.getElementById('galUploadError').textContent;
@@ -1251,6 +1380,48 @@ document.getElementById('submitReview').addEventListener('click', () => {
   setTimeout(() => document.getElementById('reviewFormMsg').classList.remove('show'), 2500);
 });
 
+/* ===================== JOIN TEAM APPLICATION ===================== */
+document.getElementById('submitJoinApplication').addEventListener('click', async () => {
+  const name = document.getElementById('joinName').value.trim();
+  const discord = document.getElementById('joinDiscord').value.trim();
+  const role = document.getElementById('joinRole').value.trim();
+  const experience = document.getElementById('joinExperience').value.trim();
+  const message = document.getElementById('joinMessage').value.trim();
+  const errEl = document.getElementById('joinFormError');
+  const btn = document.getElementById('submitJoinApplication');
+  if(!name || !discord || !role){ errEl.classList.add('show'); return; }
+  errEl.classList.remove('show');
+  btn.disabled = true;
+  const originalLabel = btn.textContent;
+  btn.textContent = 'Submitting…';
+  const application = {
+    id: newApplicationId(),
+    name, discord, role, experience, message,
+    status: 'pending',
+    date: new Date().toLocaleDateString(undefined,{month:'short', day:'numeric', year:'numeric'})
+  };
+  siteData.applications.unshift(application);
+  renderMyApplications();
+  const ok = await saveApplicationsData();
+  btn.disabled = false;
+  btn.textContent = originalLabel;
+  if(!ok){
+    siteData.applications.shift();
+    renderMyApplications();
+    errEl.textContent = 'Could not submit — check your connection and try again.';
+    errEl.classList.add('show');
+    return;
+  }
+  addMyApplicationId(application.id);
+  renderMyApplications();
+  updatePendingAppBadge();
+  document.getElementById('joinFormMsg').classList.add('show');
+  document.getElementById('joinName').value=''; document.getElementById('joinDiscord').value='';
+  document.getElementById('joinRole').value=''; document.getElementById('joinExperience').value='';
+  document.getElementById('joinMessage').value='';
+  setTimeout(() => document.getElementById('joinFormMsg').classList.remove('show'), 3000);
+});
+
 /* ===================== ADMIN LOGIN ===================== */
 const adminLoginOverlay = document.getElementById('adminLoginOverlay');
 const adminPanelOverlay = document.getElementById('adminPanelOverlay');
@@ -1296,7 +1467,7 @@ function openAdminPanel(){
   document.getElementById('editAbout2').value = siteData.about.story2;
   document.getElementById('editGoals').value = siteData.about.goals.join('\n');
   document.getElementById('editTeamSubtitle').value = siteData.teamSubtitle;
-  renderTeamEdit(); renderGalleryEdit(); renderNewsEdit(); renderReviewsEdit();
+  renderTeamEdit(); renderGalleryEdit(); renderNewsEdit(); renderReviewsEdit(); renderApplicationsEdit();
   adminPanelOverlay.classList.add('open');
 }
 
@@ -1467,6 +1638,91 @@ document.getElementById('addReviewItem').addEventListener('click', () => {
   renderReviewsEdit();
 });
 
+/* ===================== APPLICATIONS ADMIN ===================== */
+// If an applicant's requested role matches one of the named roles that
+// already has a set outline color, carry that color over automatically.
+const ROLE_NAME_TO_OUTLINE = { 'leader':'gold', 'co-admin':'blue', 'admin':'green', 'pvp warrior':'red', 'loot collector':'purple' };
+function guessOutlineForRole(roleText){
+  return ROLE_NAME_TO_OUTLINE[(roleText || '').trim().toLowerCase()] || 'none';
+}
+function renderApplicationsEdit(){
+  const list = document.getElementById('applicationsEditList');
+  if(!siteData.applications.length){ list.innerHTML = `<div class="empty-state">No applications yet.</div>`; return; }
+  list.innerHTML = siteData.applications.map((a,i) => `
+    <div class="edit-card">
+      <div class="edit-card-head">
+        <div class="card-title"><span class="card-num">${i+1}</span>${escapeHtml(a.name)} — ${escapeHtml(a.role)}</div>
+        <button class="remove-btn-icon" data-remove-app="${i}">Remove</button>
+      </div>
+      <div class="edit-card-body app-edit-card-body">
+        <div class="field-row">
+          <div class="app-detail"><label>Name</label><p>${escapeHtml(a.name)}</p></div>
+          <div class="app-detail"><label>Discord</label><p>${escapeHtml(a.discord)}</p></div>
+        </div>
+        <div class="app-detail"><label>Role Requested</label><p>${escapeHtml(a.role)}</p></div>
+        ${a.experience ? `<div class="app-detail"><label>Experience</label><p>${escapeHtml(a.experience)}</p></div>` : ''}
+        ${a.message ? `<div class="app-detail"><label>Why They Want to Join</label><p>${escapeHtml(a.message)}</p></div>` : ''}
+        <div class="app-detail"><label>Submitted</label><p>${escapeHtml(a.date)}</p></div>
+        <div class="app-status-row">
+          ${statusPill(a.status)}
+          <div class="app-status-actions">
+            <button class="btn btn-ghost btn-sm" data-approve-app="${i}" ${a.status === 'approved' ? 'disabled' : ''}>✓ Approve</button>
+            <button class="btn btn-danger btn-sm" data-reject-app="${i}" ${a.status === 'rejected' ? 'disabled' : ''}>✕ Reject</button>
+            ${a.status && a.status !== 'pending' ? `<button class="btn btn-ghost btn-sm" data-pending-app="${i}">Reset to Pending</button>` : ''}
+          </div>
+        </div>
+      </div>
+    </div>`).join('');
+  list.querySelectorAll('[data-approve-app]').forEach(btn => btn.addEventListener('click', () => approveApplication(Number(btn.dataset.approveApp))));
+  list.querySelectorAll('[data-reject-app]').forEach(btn => btn.addEventListener('click', () => rejectApplication(Number(btn.dataset.rejectApp))));
+  list.querySelectorAll('[data-pending-app]').forEach(btn => btn.addEventListener('click', () => resetApplicationPending(Number(btn.dataset.pendingApp))));
+  list.querySelectorAll('[data-remove-app]').forEach(btn => btn.addEventListener('click', () => {
+    if(confirm('Remove this application? This cannot be undone.')) removeApplication(Number(btn.dataset.removeApp));
+  }));
+}
+async function approveApplication(i){
+  const a = siteData.applications[i];
+  if(!a || a.status === 'approved') return;
+  a.status = 'approved';
+  siteData.team.push({
+    name: a.name,
+    role: a.role,
+    bio: a.experience || 'New addition to the BlueX Team.',
+    handle: a.discord,
+    outline: guessOutlineForRole(a.role),
+    avatar: ''
+  });
+  renderApplicationsEdit();
+  renderTeamEdit();
+  const [metaOk, appOk] = await Promise.all([saveSiteMeta(), saveApplicationsData()]);
+  renderAll();
+  updatePendingAppBadge();
+  showToast(metaOk && appOk ? `✓ ${a.name} approved and added to the team` : '⚠ Saved locally — check connection');
+}
+async function rejectApplication(i){
+  const a = siteData.applications[i];
+  if(!a) return;
+  a.status = 'rejected';
+  renderApplicationsEdit();
+  await saveApplicationsData();
+  updatePendingAppBadge();
+  showToast(`Application rejected`);
+}
+async function resetApplicationPending(i){
+  const a = siteData.applications[i];
+  if(!a) return;
+  a.status = 'pending';
+  renderApplicationsEdit();
+  await saveApplicationsData();
+  updatePendingAppBadge();
+}
+async function removeApplication(i){
+  siteData.applications.splice(i, 1);
+  renderApplicationsEdit();
+  await saveApplicationsData();
+  updatePendingAppBadge();
+}
+
 document.getElementById('saveAdminChanges').addEventListener('click', async () => {
   siteData.hero.title = document.getElementById('editHeroTitle').value;
   siteData.hero.lead = document.getElementById('editHeroLead').value;
@@ -1484,7 +1740,7 @@ document.getElementById('saveAdminChanges').addEventListener('click', async () =
 document.getElementById('resetDefaults').addEventListener('click', async () => {
   if(!confirm('Reset all content back to the default? This cannot be undone.')) return;
   siteData = JSON.parse(JSON.stringify(DEFAULT_DATA));
-  await Promise.all([saveSiteMeta(), saveGalleryData()]);
+  await Promise.all([saveSiteMeta(), saveGalleryData(), saveApplicationsData()]);
   renderAll(); openAdminPanel();
   showToast('✓ Reset to default');
 });
@@ -1495,16 +1751,22 @@ adminLoginOverlay.addEventListener('click', e => { if(e.target === adminLoginOve
 (async () => {
   // Load and render the fast, small text content first.
   const meta = await loadSiteMeta();
-  siteData = { ...meta, gallery: [] };
+  siteData = { ...meta, gallery: [], applications: [] };
   renderAll();
   revealVisible();
 
-  // Load gallery photos separately in the background so they never delay
-  // the initial page render.
+  // Load gallery photos and applications separately in the background so
+  // they never delay the initial page render.
   loadGallery().then(gallery => {
     siteData.gallery = gallery;
     renderGallery();
     if(adminPanelOverlay.classList.contains('open')) renderGalleryEdit();
+  });
+  loadApplications().then(applications => {
+    siteData.applications = applications;
+    renderMyApplications();
+    updatePendingAppBadge();
+    if(adminPanelOverlay.classList.contains('open')) renderApplicationsEdit();
   });
 })();
 </script>
