@@ -757,11 +757,12 @@
       <input type="password" id="adminPassword" placeholder="Enter admin password">
     </div>
     <div class="error-msg" id="adminLoginError">Incorrect password. Try again.</div>
+    <div class="error-msg" id="adminLoginLockout" style="color:#ffb020;"></div>
     <div style="display:flex; gap:10px; margin-top:18px;">
       <button class="btn btn-primary" id="adminLoginSubmit">Log In</button>
       <button class="btn btn-ghost" id="adminLoginCancel">Cancel</button>
     </div>
-    <p class="hint" style="margin-top:18px; text-align:left;">This is a client-side lock for a static site. Saved edits live in this browser only.</p>
+    <p class="hint" style="margin-top:18px; text-align:left;">This is a client-side lock for a static site. Saved edits sync live via Firebase.</p>
   </div>
 </div>
 
@@ -775,6 +776,8 @@
       </div>
       <button class="btn btn-ghost btn-sm" id="adminLogout">Log Out</button>
     </div>
+    <div class="admin-alert-banner" id="adminAlertBanner" style="display:none; background:rgba(255,176,32,0.12); border-bottom:1px solid #ffb020; color:#ffb020; font-family:'JetBrains Mono'; font-size:12px; padding:10px 18px;"></div>
+    <div style="font-family:'JetBrains Mono'; font-size:10.5px; color:var(--blue-soft); opacity:.7; padding:6px 18px 0;" id="adminSessionHint">Session auto-logs out after <span id="idleTimeoutMins"></span> min of inactivity.</div>
     <div class="admin-main">
       <div class="admin-tabs">
         <button class="admin-tab active" data-atab="page"><span>📝</span><span>Page Content</span></button>
@@ -783,6 +786,7 @@
         <button class="admin-tab" data-atab="gallery"><span>🖼</span><span>Gallery</span></button>
         <button class="admin-tab" data-atab="news"><span>📰</span><span>News</span></button>
         <button class="admin-tab" data-atab="reviews"><span>⭐</span><span>Reviews</span></button>
+        <button class="admin-tab" data-atab="logs"><span>🛡</span><span>Activity Log</span></button>
       </div>
       <div class="admin-body">
 
@@ -841,6 +845,11 @@
           <button class="btn btn-ghost btn-sm" id="addReviewItem">+ Add Review</button>
         </div>
 
+        <div class="admin-pane" id="apane-logs">
+          <div class="tab-toolbar"><p class="hint">Logins, logouts, approvals/rejections, and content changes — most recent first. Stored in Firebase, so it's shared across devices/browsers.</p></div>
+          <div id="adminLogsList" style="display:flex; flex-direction:column; gap:6px; font-family:'JetBrains Mono'; font-size:12px;"></div>
+        </div>
+
       </div>
     </div>
     <div class="admin-foot">
@@ -859,7 +868,7 @@
 /* ===================== FIREBASE SETUP ===================== */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  getDatabase, ref, get, set, onValue
+  getDatabase, ref, get, set, onValue, push, query, limitToLast
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 const firebaseConfig = {
@@ -883,6 +892,10 @@ const applicationsRef = ref(db, 'applications');
 // Legacy path used before the siteMeta/gallery split — real site content may
 // still be sitting here and needs to be migrated forward, not overwritten.
 const legacySiteDataRef = ref(db, 'siteData');
+// Admin security: activity log + login-attempt tracking, both shared via Firebase
+// so they're visible to any admin, not just the browser that triggered them.
+const adminLogsRef = ref(db, 'adminLogs');
+const loginAttemptsRef = ref(db, 'adminSecurity/loginAttempts');
 function withoutGallery(data){
   const copy = JSON.parse(JSON.stringify(data));
   delete copy.gallery;
@@ -1015,6 +1028,7 @@ async function loadApplications(){
 async function saveSiteMeta(){
   try{
     await set(siteMetaRef, withoutGallery(siteData));
+    logActivity('content_save');
     return true;
   }catch(e){
     console.error('Firebase save failed:', e);
@@ -1027,6 +1041,7 @@ async function saveSiteMeta(){
 async function saveGalleryData(){
   try{
     await set(galleryRef, siteData.gallery);
+    logActivity('gallery_save');
     return true;
   }catch(e){
     console.error('Firebase gallery save failed:', e);
@@ -1039,6 +1054,7 @@ async function saveGalleryData(){
 async function saveApplicationsData(){
   try{
     await set(applicationsRef, siteData.applications);
+    logActivity('applications_save');
     return true;
   }catch(e){
     console.error('Firebase applications save failed:', e);
@@ -1422,6 +1438,91 @@ document.getElementById('submitJoinApplication').addEventListener('click', async
   setTimeout(() => document.getElementById('joinFormMsg').classList.remove('show'), 3000);
 });
 
+/* ===================== ADMIN SECURITY: CONFIG ===================== */
+const MAX_LOGIN_ATTEMPTS = 5;          // failed tries allowed before lockout
+const LOCKOUT_MS = 5 * 60 * 1000;      // 5 minute cooldown after lockout
+const IDLE_LOGOUT_MS = 10 * 60 * 1000; // auto logout after 10 min inactivity
+const SUSPICIOUS_ATTEMPT_THRESHOLD = 3; // alert after this many failures
+
+// NOTE ON SCOPE: the password check itself runs in this browser file and the
+// hash above is visible to anyone who views source, and the Firebase writes
+// below happen straight from the client. Everything in this section raises
+// the bar against casual snooping (repeat guessing, someone leaving the
+// panel open, no record of what changed) — it is not a substitute for
+// server-side auth (e.g. Firebase Authentication + Database Security Rules),
+// which is the only thing that can actually stop a determined attacker.
+
+const DEVICE_ID_KEY = 'bz_admin_device_id';
+function getDeviceId(){
+  let id = localStorage.getItem(DEVICE_ID_KEY);
+  if(!id){
+    id = 'dev_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+  }
+  return id;
+}
+function isKnownDevice(){
+  return !!localStorage.getItem(DEVICE_ID_KEY);
+}
+function markDeviceKnown(){
+  try{ localStorage.setItem(DEVICE_ID_KEY, getDeviceId()); }catch(e){}
+}
+
+/* ===================== ADMIN SECURITY: ACTIVITY LOG ===================== */
+async function logActivity(action, details){
+  const entry = {
+    action,
+    details: details || '',
+    ts: Date.now(),
+    device: getDeviceId(),
+    userAgent: navigator.userAgent
+  };
+  try{
+    await push(adminLogsRef, entry);
+  }catch(e){
+    console.error('Activity log write failed:', e);
+  }
+  renderLogsList(); // optimistic local refresh if the panel happens to be open
+}
+let cachedLogs = [];
+onValue(query(adminLogsRef, limitToLast(200)), snapshot => {
+  const val = snapshot.val() || {};
+  cachedLogs = Object.values(val).sort((a,b) => b.ts - a.ts);
+  renderLogsList();
+});
+function renderLogsList(){
+  const list = document.getElementById('adminLogsList');
+  if(!list) return;
+  if(!cachedLogs.length){ list.innerHTML = '<p class="hint">No activity recorded yet.</p>'; return; }
+  list.innerHTML = cachedLogs.map(l => `
+    <div style="padding:8px 10px; border:1px solid var(--line); border-radius:6px; display:flex; justify-content:space-between; gap:10px;">
+      <span>${escapeHtml(actionLabel(l.action))}${l.details ? ' — ' + escapeHtml(l.details) : ''}</span>
+      <span style="opacity:.6; white-space:nowrap;">${new Date(l.ts).toLocaleString()}</span>
+    </div>`).join('');
+}
+function actionLabel(action){
+  const labels = {
+    login: '✅ Admin logged in', failed_login: '❌ Failed login attempt', lockout: '🔒 Login locked out',
+    logout: '🚪 Admin logged out', idle_logout: '⏱ Auto logged out (inactivity)',
+    approve_application: '✔ Application approved', reject_application: '✕ Application rejected',
+    content_save: '📝 Site content saved', gallery_save: '🖼 Gallery updated', applications_save: '📋 Applications updated',
+    new_device: '⚠ Login from new device'
+  };
+  return labels[action] || action;
+}
+
+/* ===================== ADMIN SECURITY: ALERTS ===================== */
+if('Notification' in window && Notification.permission === 'default'){
+  // Ask quietly on first load; harmless if the user ignores/denies it.
+  Notification.requestPermission().catch(()=>{});
+}
+function fireAlert(message){
+  const banner = document.getElementById('adminAlertBanner');
+  if(banner){ banner.textContent = '⚠ ' + message; banner.style.display = 'block'; }
+  if('Notification' in window && Notification.permission === 'granted'){
+    try{ new Notification('BLUE-ZONE Admin Alert', { body: message }); }catch(e){}
+  }
+}
+
 /* ===================== ADMIN LOGIN ===================== */
 const adminLoginOverlay = document.getElementById('adminLoginOverlay');
 const adminPanelOverlay = document.getElementById('adminPanelOverlay');
@@ -1429,23 +1530,122 @@ document.getElementById('openAdminLogin').addEventListener('click', () => {
   adminLoginOverlay.classList.add('open');
   document.getElementById('adminPassword').value = '';
   document.getElementById('adminLoginError').classList.remove('show');
+  refreshLockoutUI();
 });
 document.getElementById('adminLoginCancel').addEventListener('click', () => adminLoginOverlay.classList.remove('open'));
 document.getElementById('adminLoginSubmit').addEventListener('click', attemptLogin);
 document.getElementById('adminPassword').addEventListener('keydown', e => { if(e.key === 'Enter') attemptLogin(); });
+
+async function getLoginState(){
+  try{
+    const snap = await get(loginAttemptsRef);
+    return snap.exists() ? snap.val() : { count: 0, lockedUntil: 0 };
+  }catch(e){
+    return { count: 0, lockedUntil: 0 };
+  }
+}
+async function setLoginState(state){
+  try{ await set(loginAttemptsRef, state); }catch(e){}
+}
+function fmtRemaining(ms){
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  const m = Math.floor(s / 60), r = s % 60;
+  return `${m}:${String(r).padStart(2,'0')}`;
+}
+async function refreshLockoutUI(){
+  const state = await getLoginState();
+  const lockEl = document.getElementById('adminLoginLockout');
+  const submitBtn = document.getElementById('adminLoginSubmit');
+  const now = Date.now();
+  if(state.lockedUntil && state.lockedUntil > now){
+    lockEl.textContent = `Too many failed attempts. Try again in ${fmtRemaining(state.lockedUntil - now)}.`;
+    lockEl.classList.add('show');
+    submitBtn.disabled = true;
+    if(!refreshLockoutUI._interval){
+      refreshLockoutUI._interval = setInterval(async () => {
+        const s = await getLoginState();
+        if(!s.lockedUntil || s.lockedUntil <= Date.now()){
+          clearInterval(refreshLockoutUI._interval); refreshLockoutUI._interval = null;
+          lockEl.classList.remove('show'); submitBtn.disabled = false;
+        } else {
+          lockEl.textContent = `Too many failed attempts. Try again in ${fmtRemaining(s.lockedUntil - Date.now())}.`;
+        }
+      }, 1000);
+    }
+  } else {
+    lockEl.classList.remove('show');
+    submitBtn.disabled = false;
+  }
+}
 async function attemptLogin(){
+  const state = await getLoginState();
+  const now = Date.now();
+  if(state.lockedUntil && state.lockedUntil > now){
+    refreshLockoutUI();
+    return;
+  }
   const pass = document.getElementById('adminPassword').value;
   const hash = await sha256Hex(pass);
   if(hash === ADMIN_PASSWORD_HASH){
+    await setLoginState({ count: 0, lockedUntil: 0 });
     adminLoginOverlay.classList.remove('open');
+    const newDevice = !isKnownDevice();
+    markDeviceKnown();
+    await logActivity('login');
+    if(newDevice){
+      await logActivity('new_device');
+      fireAlert('Admin login from a new/unrecognized device.');
+    }
     openAdminPanel();
+    startIdleTimer();
   } else {
+    const nextCount = (state.count || 0) + 1;
+    let nextState = { count: nextCount, lockedUntil: 0 };
+    await logActivity('failed_login', `attempt ${nextCount} of ${MAX_LOGIN_ATTEMPTS}`);
+    if(nextCount >= SUSPICIOUS_ATTEMPT_THRESHOLD){
+      fireAlert(`${nextCount} failed admin login attempts.`);
+    }
+    if(nextCount >= MAX_LOGIN_ATTEMPTS){
+      nextState.lockedUntil = now + LOCKOUT_MS;
+      await logActivity('lockout', `locked for ${Math.round(LOCKOUT_MS/60000)} min`);
+      fireAlert('Admin login locked out after repeated failed attempts.');
+    }
+    await setLoginState(nextState);
     document.getElementById('adminLoginError').classList.add('show');
     const box = document.querySelector('#adminLoginOverlay .admin-box');
     box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake');
+    refreshLockoutUI();
   }
 }
-document.getElementById('adminLogout').addEventListener('click', () => adminPanelOverlay.classList.remove('open'));
+document.getElementById('adminLogout').addEventListener('click', () => {
+  logActivity('logout');
+  stopIdleTimer();
+  adminPanelOverlay.classList.remove('open');
+});
+
+/* ===================== ADMIN SECURITY: AUTO LOGOUT ===================== */
+let idleTimer = null;
+function startIdleTimer(){
+  document.getElementById('idleTimeoutMins').textContent = Math.round(IDLE_LOGOUT_MS / 60000);
+  resetIdleTimer();
+  ['mousemove','mousedown','keydown','scroll','touchstart'].forEach(evt =>
+    document.addEventListener(evt, resetIdleTimer));
+}
+function stopIdleTimer(){
+  if(idleTimer) clearTimeout(idleTimer);
+  ['mousemove','mousedown','keydown','scroll','touchstart'].forEach(evt =>
+    document.removeEventListener(evt, resetIdleTimer));
+}
+function resetIdleTimer(){
+  if(!adminPanelOverlay.classList.contains('open')) return;
+  if(idleTimer) clearTimeout(idleTimer);
+  idleTimer = setTimeout(async () => {
+    await logActivity('idle_logout');
+    stopIdleTimer();
+    adminPanelOverlay.classList.remove('open');
+    showToast('⏱ Logged out after inactivity');
+  }, IDLE_LOGOUT_MS);
+}
 
 /* ===================== ADMIN PANEL TABS ===================== */
 document.querySelectorAll('.admin-tab').forEach(tab => {
@@ -1467,7 +1667,7 @@ function openAdminPanel(){
   document.getElementById('editAbout2').value = siteData.about.story2;
   document.getElementById('editGoals').value = siteData.about.goals.join('\n');
   document.getElementById('editTeamSubtitle').value = siteData.teamSubtitle;
-  renderTeamEdit(); renderGalleryEdit(); renderNewsEdit(); renderReviewsEdit(); renderApplicationsEdit();
+  renderTeamEdit(); renderGalleryEdit(); renderNewsEdit(); renderReviewsEdit(); renderApplicationsEdit(); renderLogsList();
   adminPanelOverlay.classList.add('open');
 }
 
@@ -1695,6 +1895,7 @@ async function approveApplication(i){
   renderApplicationsEdit();
   renderTeamEdit();
   const [metaOk, appOk] = await Promise.all([saveSiteMeta(), saveApplicationsData()]);
+  logActivity('approve_application', a.name);
   renderAll();
   updatePendingAppBadge();
   showToast(metaOk && appOk ? `✓ ${a.name} approved and added to the team` : '⚠ Saved locally — check connection');
@@ -1705,6 +1906,7 @@ async function rejectApplication(i){
   a.status = 'rejected';
   renderApplicationsEdit();
   await saveApplicationsData();
+  logActivity('reject_application', a.name);
   updatePendingAppBadge();
   showToast(`Application rejected`);
 }
