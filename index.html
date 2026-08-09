@@ -10,6 +10,14 @@
 <link rel="canonical" href="https://nilaboygamer01.github.io/BLUE-ZONE/">
 <meta name="theme-color" content="#0b1830">
 
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BLUE-ZONE">
+
 <!-- Open Graph / Facebook -->
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://nilaboygamer01.github.io/BLUE-ZONE/">
@@ -549,6 +557,9 @@
         <button class="btn btn-ghost btn-sm" id="userLogoutBtn" style="width:100%; justify-content:center;">Log Out</button>
       </div>
     </div>
+    <button class="btn btn-ghost btn-sm" id="pwaInstallBtn" type="button" hidden style="margin-left:8px;">
+      ⬇ Install App
+    </button>
     <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="siteNav">
       <span></span><span></span><span></span>
     </button>
@@ -2400,6 +2411,68 @@ setTimeout(hidePageLoader, PAGE_LOADER_MAX_MS);
     updatePendingAppBadge();
     if(adminPanelOverlay.classList.contains('open')) renderApplicationsEdit();
   });
+})();
+</script>
+
+<!-- ===================== PWA: install + service worker ===================== -->
+<script>
+(function () {
+  'use strict';
+
+  // ---- Register the service worker ----
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('service-worker.js')
+        .then((reg) => {
+          console.log('[PWA] Service worker registered:', reg.scope);
+        })
+        .catch((err) => {
+          console.warn('[PWA] Service worker registration failed:', err);
+        });
+    });
+  }
+
+  // ---- Custom "Install App" button ----
+  // Browsers that support installable PWAs fire 'beforeinstallprompt'.
+  // We stash the event, reveal our button, and trigger the native prompt
+  // when the user clicks it — instead of relying on the browser's own
+  // (often hidden) install UI.
+  let deferredInstallPrompt = null;
+  const installBtn = document.getElementById('pwaInstallBtn');
+
+  window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    if (installBtn) installBtn.hidden = false;
+  });
+
+  if (installBtn) {
+    installBtn.addEventListener('click', async () => {
+      if (!deferredInstallPrompt) return;
+      installBtn.hidden = true;
+      deferredInstallPrompt.prompt();
+      try {
+        const { outcome } = await deferredInstallPrompt.userChoice;
+        console.log('[PWA] Install prompt outcome:', outcome);
+      } catch (err) {
+        console.warn('[PWA] Install prompt error:', err);
+      }
+      deferredInstallPrompt = null;
+    });
+  }
+
+  // Hide the button once the app has actually been installed.
+  window.addEventListener('appinstalled', () => {
+    deferredInstallPrompt = null;
+    if (installBtn) installBtn.hidden = true;
+    console.log('[PWA] App installed.');
+  });
+
+  // If already running standalone (installed), no need to show the button.
+  const isStandalone =
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true;
+  if (isStandalone && installBtn) installBtn.hidden = true;
 })();
 </script>
 </body>
