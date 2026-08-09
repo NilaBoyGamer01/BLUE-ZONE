@@ -29,6 +29,25 @@
   ::-webkit-scrollbar-track{ background: var(--bg); }
   ::-webkit-scrollbar-thumb{ background: var(--blue-dark); }
 
+  /* ---------------- PAGE LOADER ---------------- */
+  #pageLoader{
+    position:fixed; inset:0; z-index:9999;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px;
+    background: radial-gradient(circle at 50% 40%, var(--bg-panel-2), var(--bg) 70%);
+    transition: opacity .5s ease, visibility .5s ease;
+  }
+  #pageLoader.loader-hide{ opacity:0; visibility:hidden; pointer-events:none; }
+  .loader-logo{ font-family:'Press Start 2P'; font-size:18px; letter-spacing:1px; color:var(--text); display:flex; align-items:center; gap:4px; }
+  .loader-logo span{ color:var(--blue); text-shadow:0 0 14px var(--blue); }
+  .loader-ring{ width:52px; height:52px; border-radius:50%;
+    border:3px solid var(--line); border-top-color:var(--blue); border-right-color:var(--blue-soft);
+    animation: loaderSpin 0.9s linear infinite; }
+  @keyframes loaderSpin{ to{ transform:rotate(360deg); } }
+  .loader-msg{ font-family:'JetBrains Mono', monospace; font-size:12px; letter-spacing:.5px; color:var(--text-dim); text-transform:uppercase; }
+  .loader-bar-track{ width:180px; height:4px; border-radius:2px; background:var(--line); overflow:hidden; }
+  .loader-bar-fill{ height:100%; width:10%; border-radius:2px; background:linear-gradient(90deg, var(--blue-deep), var(--blue)); transition: width .35s ease; }
+  @media (prefers-reduced-motion: reduce){ .loader-ring{ animation-duration:1.6s; } }
+
   /* ---------------- HEADER / TAB NAV ---------------- */
   header{ position:sticky; top:0; z-index:100; background: rgba(6,12,24,0.92); backdrop-filter: blur(10px); border-bottom:1px solid var(--line); }
   .navbar{ max-width:1120px; margin:0 auto; padding:16px 28px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
@@ -456,6 +475,13 @@
 </style>
 </head>
 <body>
+<div id="pageLoader" role="status" aria-live="polite">
+  <div class="loader-logo">BLUE<span>-ZONE</span></div>
+  <div class="loader-ring"></div>
+  <div class="loader-bar-track"><div class="loader-bar-fill" id="loaderBarFill"></div></div>
+  <div class="loader-msg" id="loaderMsg">Loading…</div>
+</div>
+
 
 <header>
   <div class="navbar">
@@ -1954,12 +1980,39 @@ adminPanelOverlay.addEventListener('click', e => { if(e.target === adminPanelOve
 adminLoginOverlay.addEventListener('click', e => { if(e.target === adminLoginOverlay) adminLoginOverlay.classList.remove('open'); });
 
 /* ===================== INIT ===================== */
+const PAGE_LOADER_MIN_MS = 900;   // keep visible at least this long so it never just flashes
+const PAGE_LOADER_MAX_MS = 8000;  // hard safety net in case something hangs
+const pageLoaderStart = Date.now();
+const loaderBarFill = document.getElementById('loaderBarFill');
+const loaderMsg = document.getElementById('loaderMsg');
+function setLoaderProgress(pct, msg){
+  if(loaderBarFill) loaderBarFill.style.width = pct + '%';
+  if(msg && loaderMsg) loaderMsg.textContent = msg;
+}
+function hidePageLoader(){
+  const el = document.getElementById('pageLoader');
+  if(!el || el.dataset.hidden) return;
+  el.dataset.hidden = '1';
+  setLoaderProgress(100);
+  const elapsed = Date.now() - pageLoaderStart;
+  const wait = Math.max(0, PAGE_LOADER_MIN_MS - elapsed);
+  setTimeout(() => {
+    el.classList.add('loader-hide');
+    setTimeout(() => el.remove(), 550); // matches the CSS fade duration
+  }, wait);
+}
+// Safety net: never let the loader block the site indefinitely.
+setTimeout(hidePageLoader, PAGE_LOADER_MAX_MS);
+
 (async () => {
+  setLoaderProgress(30, 'Connecting…');
   // Load and render the fast, small text content first.
   const meta = await loadSiteMeta();
+  setLoaderProgress(70, 'Rendering…');
   siteData = { ...meta, gallery: [], applications: [] };
   renderAll();
   revealVisible();
+  hidePageLoader();
 
   // Load gallery photos and applications separately in the background so
   // they never delay the initial page render.
