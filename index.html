@@ -1863,6 +1863,7 @@ const adminPanelOverlay = document.getElementById('adminPanelOverlay');
 document.getElementById('openAdminLogin').addEventListener('click', () => {
   adminLoginOverlay.classList.add('open');
   document.getElementById('adminPassword').value = '';
+  document.getElementById('adminLoginError').textContent = 'Incorrect password. Try again.';
   document.getElementById('adminLoginError').classList.remove('show');
   refreshLockoutUI();
 });
@@ -1927,6 +1928,14 @@ async function attemptLogin(){
   const pass = document.getElementById('adminPassword').value;
   const hash = await sha256Hex(pass);
   if(hash === ADMIN_PASSWORD_HASH){
+    if(!auth.currentUser){
+      document.getElementById('adminLoginError').textContent =
+        'Password correct, but you also need to be logged into your admin account. Use the "Log In" button (top right) first, then try again.';
+      document.getElementById('adminLoginError').classList.add('show');
+      const box = document.querySelector('#adminLoginOverlay .admin-box');
+      box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake');
+      return;
+    }
     await setLoginState({ count: 0, lockedUntil: 0 });
     adminLoginOverlay.classList.remove('open');
     const newDevice = !isKnownDevice();
