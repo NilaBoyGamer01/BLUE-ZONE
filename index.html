@@ -373,6 +373,42 @@
   .footer-bottom{ display:flex; justify-content:space-between; align-items:center; padding-top:22px; border-top:1px solid var(--line);
     font-size:12.5px; color: var(--text-dim); font-family:'JetBrains Mono'; flex-wrap:wrap; gap:8px; }
 
+  /* ---------------- USER AUTH (NAV) ---------------- */
+  .user-menu{ position:relative; flex:none; }
+  .user-auth-btn{ display:inline-flex; align-items:center; gap:7px; background: linear-gradient(135deg, rgba(53,217,255,0.14), rgba(47,91,215,0.10));
+    border:1px solid var(--blue-deep); color: var(--blue-soft); font-family:'JetBrains Mono'; font-size:12px; font-weight:700; letter-spacing:.5px;
+    padding:9px 14px; cursor:pointer; white-space:nowrap; transition: transform .2s ease, border-color .2s ease, color .2s ease; max-width:150px; }
+  .user-auth-btn:hover{ border-color: var(--blue); color:#fff; transform: translateY(-1px); }
+  .user-auth-icon{ font-size:14px; flex:none; }
+  .user-auth-label{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .user-dropdown{ position:absolute; top:calc(100% + 10px); right:0; background: linear-gradient(180deg, var(--bg-panel), var(--bg-panel-2));
+    border:1px solid var(--blue-deep); padding:14px; min-width:210px; box-shadow: 0 16px 34px -14px rgba(0,0,0,0.65);
+    opacity:0; pointer-events:none; transform: translateY(-8px); transition: opacity .2s ease, transform .2s ease; z-index:110; }
+  .user-dropdown.open{ opacity:1; pointer-events:auto; transform:translateY(0); }
+  .user-dropdown-name{ font-size:13.5px; font-weight:700; margin-bottom:2px; }
+  .user-dropdown-email{ font-family:'JetBrains Mono'; font-size:11px; color: var(--text-dim); margin-bottom:12px; word-break:break-all; }
+  @media (max-width:940px){ .user-auth-label{ display:none; } .user-auth-btn{ padding:9px 11px; } }
+
+  /* ---------------- USER AUTH (MODAL) ---------------- */
+  .auth-tabs{ display:flex; gap:6px; margin-bottom:20px; background: var(--bg); border:1px solid var(--line); padding:4px; }
+  .auth-tab{ flex:1; background:none; border:none; color: var(--text-dim); font-family:'JetBrains Mono'; font-size:11.5px; font-weight:700; letter-spacing:.5px;
+    padding:9px 6px; cursor:pointer; transition: background .2s ease, color .2s ease; text-transform:uppercase; }
+  .auth-tab.active{ background: linear-gradient(135deg, var(--blue), var(--lapis)); color:#04101e; }
+  .auth-view{ display:none; text-align:left; }
+  .auth-view.active{ display:block; }
+  .password-field{ position:relative; }
+  .password-field input{ padding-right:44px !important; }
+  .password-toggle{ position:absolute; right:5px; top:50%; transform:translateY(-50%); background:none; border:none; color: var(--text-dim);
+    font-size:15px; cursor:pointer; padding:7px; line-height:1; }
+  .password-toggle:hover{ color: var(--blue-soft); }
+  .auth-row{ display:flex; align-items:center; justify-content:space-between; margin:-6px 0 16px; flex-wrap:wrap; gap:8px; }
+  .remember-me{ display:flex; align-items:center; gap:7px; font-size:12.5px; color: var(--text-dim); cursor:pointer; }
+  .remember-me input{ accent-color: var(--blue); width:14px; height:14px; cursor:pointer; }
+  .link-btn{ background:none; border:none; color: var(--blue-soft); font-size:12.5px; cursor:pointer; padding:0; font-family:'Rubik'; }
+  .link-btn:hover{ text-decoration:underline; }
+  .success-msg{ color: var(--emerald); font-size:13px; margin-top:10px; display:none; }
+  .success-msg.show{ display:block; }
+
   /* ---------------- ADMIN LINK ---------------- */
   .admin-link{ display:inline-flex; align-items:center; gap:9px; margin-top:6px;
     background: linear-gradient(135deg, rgba(53,217,255,0.14), rgba(47,91,215,0.10));
@@ -502,6 +538,17 @@
         <li><button class="tab-link" data-tab="reviews">Reviews</button></li>
       </ul>
     </nav>
+    <div class="user-menu" id="userMenu">
+      <button class="user-auth-btn" id="userAuthBtn" aria-label="Account">
+        <span class="user-auth-icon">👤</span>
+        <span class="user-auth-label" id="userAuthLabel">Log In</span>
+      </button>
+      <div class="user-dropdown" id="userDropdown">
+        <div class="user-dropdown-name" id="userDropdownName"></div>
+        <div class="user-dropdown-email" id="userDropdownEmail"></div>
+        <button class="btn btn-ghost btn-sm" id="userLogoutBtn" style="width:100%; justify-content:center;">Log Out</button>
+      </div>
+    </div>
     <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="siteNav">
       <span></span><span></span><span></span>
     </button>
@@ -765,6 +812,86 @@
   </div>
 </footer>
 
+<!-- USER AUTH -->
+<div class="admin-overlay" id="authOverlay">
+  <div class="admin-box" id="authBox">
+    <div class="admin-box-icon" id="authBoxIcon">👤</div>
+    <h3 class="mono" style="font-family:'Press Start 2P'; font-size:12.5px; margin-bottom:6px;" id="authTitle">WELCOME BACK</h3>
+    <p class="hint" style="text-align:center; margin-top:0;" id="authSubtitle">Log in to your BLUE-ZONE account</p>
+
+    <div class="auth-tabs" id="authTabs">
+      <button class="auth-tab active" data-authtab="login">Log In</button>
+      <button class="auth-tab" data-authtab="signup">Sign Up</button>
+    </div>
+
+    <!-- LOGIN VIEW -->
+    <div class="auth-view active" id="authViewLogin">
+      <div class="field">
+        <label for="loginEmail">Email</label>
+        <input type="text" id="loginEmail" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="field">
+        <label for="loginPassword">Password</label>
+        <div class="password-field">
+          <input type="password" id="loginPassword" placeholder="Enter your password" autocomplete="current-password">
+          <button type="button" class="password-toggle" data-toggle-for="loginPassword" aria-label="Show password">👁</button>
+        </div>
+      </div>
+      <div class="auth-row">
+        <label class="remember-me"><input type="checkbox" id="rememberMe" checked><span>Remember me</span></label>
+        <button type="button" class="link-btn" id="showForgotPassword">Forgot password?</button>
+      </div>
+      <div class="error-msg" id="loginError"></div>
+      <div class="success-msg" id="loginSuccess"></div>
+      <button class="btn btn-primary" id="loginSubmit" style="width:100%; justify-content:center; margin-top:6px;">Log In</button>
+    </div>
+
+    <!-- SIGN UP VIEW -->
+    <div class="auth-view" id="authViewSignup">
+      <div class="field">
+        <label for="signupName">Display Name</label>
+        <input type="text" id="signupName" placeholder="Your name" autocomplete="name">
+      </div>
+      <div class="field">
+        <label for="signupEmail">Email</label>
+        <input type="text" id="signupEmail" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="field">
+        <label for="signupPassword">Password</label>
+        <div class="password-field">
+          <input type="password" id="signupPassword" placeholder="At least 6 characters" autocomplete="new-password">
+          <button type="button" class="password-toggle" data-toggle-for="signupPassword" aria-label="Show password">👁</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="signupPassword2">Confirm Password</label>
+        <div class="password-field">
+          <input type="password" id="signupPassword2" placeholder="Re-enter password" autocomplete="new-password">
+          <button type="button" class="password-toggle" data-toggle-for="signupPassword2" aria-label="Show password">👁</button>
+        </div>
+      </div>
+      <div class="error-msg" id="signupError"></div>
+      <div class="success-msg" id="signupSuccess"></div>
+      <button class="btn btn-primary" id="signupSubmit" style="width:100%; justify-content:center; margin-top:6px;">Create Account</button>
+    </div>
+
+    <!-- FORGOT PASSWORD VIEW -->
+    <div class="auth-view" id="authViewForgot">
+      <p class="hint" style="text-align:left; margin-top:0;">Enter your email and we'll send you a reset link.</p>
+      <div class="field">
+        <label for="forgotEmail">Email</label>
+        <input type="text" id="forgotEmail" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="error-msg" id="forgotError"></div>
+      <div class="success-msg" id="forgotSuccess"></div>
+      <button class="btn btn-primary" id="forgotSubmit" style="width:100%; justify-content:center; margin-top:6px;">Send Reset Link</button>
+      <button class="btn btn-ghost" id="backToLogin" style="width:100%; justify-content:center; margin-top:10px;">Back to Log In</button>
+    </div>
+
+    <button class="btn btn-ghost" id="authCancel" style="width:100%; justify-content:center; margin-top:14px;">Close</button>
+  </div>
+</div>
+
 <!-- ADMIN LOGIN -->
 <div class="admin-overlay" id="adminLoginOverlay">
   <div class="admin-box">
@@ -888,6 +1015,11 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import {
   getDatabase, ref, get, set, onValue, push, query, limitToLast
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import {
+  getAuth, setPersistence, browserLocalPersistence, browserSessionPersistence,
+  createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged,
+  sendPasswordResetEmail, updateProfile
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBOFvYiRzba5xS8KczSaqU0G0TbtBGoe8c",
@@ -901,6 +1033,7 @@ const firebaseConfig = {
 };
 const fbApp = initializeApp(firebaseConfig);
 const db = getDatabase(fbApp);
+const auth = getAuth(fbApp);
 // Split into two nodes: 'siteMeta' is small (text content) and loads fast for
 // the home page. 'gallery' holds the (larger) photo data and loads separately
 // in the background so it never blocks the rest of the site.
@@ -1553,6 +1686,178 @@ function fireAlert(message){
 }
 
 /* ===================== ADMIN LOGIN ===================== */
+/* ===================== USER AUTH (email/password) ===================== */
+const authOverlay = document.getElementById('authOverlay');
+const userAuthBtn = document.getElementById('userAuthBtn');
+const userAuthLabel = document.getElementById('userAuthLabel');
+const userMenu = document.getElementById('userMenu');
+const userDropdown = document.getElementById('userDropdown');
+const userDropdownName = document.getElementById('userDropdownName');
+const userDropdownEmail = document.getElementById('userDropdownEmail');
+
+function clearAuthMessages(){
+  ['loginError','loginSuccess','signupError','signupSuccess','forgotError','forgotSuccess'].forEach(id => {
+    const el = document.getElementById(id);
+    el.textContent = '';
+    el.classList.remove('show');
+  });
+}
+
+function switchAuthTab(tab){
+  document.querySelectorAll('.auth-tab').forEach(t => t.classList.toggle('active', t.dataset.authtab === tab));
+  document.querySelectorAll('.auth-view').forEach(v => v.classList.remove('active'));
+  document.getElementById('authView' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+  const copy = {
+    login:  ['WELCOME BACK', 'Log in to your BLUE-ZONE account'],
+    signup: ['JOIN BLUE-ZONE', 'Create your free account'],
+    forgot: ['RESET PASSWORD', "We'll email you a reset link"]
+  };
+  document.getElementById('authTitle').textContent = copy[tab][0];
+  document.getElementById('authSubtitle').textContent = copy[tab][1];
+  document.getElementById('authTabs').style.display = tab === 'forgot' ? 'none' : 'flex';
+  clearAuthMessages();
+}
+
+function openAuthOverlay(tab){
+  authOverlay.classList.add('open');
+  switchAuthTab(tab || 'login');
+}
+function closeAuthOverlay(){ authOverlay.classList.remove('open'); }
+
+document.querySelectorAll('.auth-tab').forEach(t => t.addEventListener('click', () => switchAuthTab(t.dataset.authtab)));
+document.getElementById('showForgotPassword').addEventListener('click', () => switchAuthTab('forgot'));
+document.getElementById('backToLogin').addEventListener('click', () => switchAuthTab('login'));
+document.getElementById('authCancel').addEventListener('click', closeAuthOverlay);
+authOverlay.addEventListener('click', e => { if(e.target === authOverlay) closeAuthOverlay(); });
+
+document.querySelectorAll('.password-toggle').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const input = document.getElementById(btn.dataset.toggleFor);
+    const showing = input.type === 'password';
+    input.type = showing ? 'text' : 'password';
+    btn.textContent = showing ? '🙈' : '👁';
+  });
+});
+
+function setMsg(id, msg){
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.classList.toggle('show', !!msg);
+}
+
+function friendlyAuthError(err){
+  const code = (err && err.code) || '';
+  const map = {
+    'auth/invalid-email': 'That email address looks invalid.',
+    'auth/user-disabled': 'This account has been disabled.',
+    'auth/user-not-found': 'No account found with that email.',
+    'auth/wrong-password': 'Incorrect password. Try again.',
+    'auth/invalid-credential': 'Incorrect email or password.',
+    'auth/email-already-in-use': 'An account already exists with that email.',
+    'auth/weak-password': 'Password should be at least 6 characters.',
+    'auth/too-many-requests': 'Too many attempts. Please wait a moment and try again.',
+    'auth/missing-password': 'Please enter a password.',
+    'auth/network-request-failed': 'Network error — check your connection.'
+  };
+  return map[code] || "Something went wrong. Please try again.";
+}
+
+// LOGIN
+document.getElementById('loginSubmit').addEventListener('click', async () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  setMsg('loginError',''); setMsg('loginSuccess','');
+  if(!email || !password){ setMsg('loginError','Please enter your email and password.'); return; }
+  const btn = document.getElementById('loginSubmit');
+  btn.disabled = true; btn.textContent = 'Logging in…';
+  try{
+    const remember = document.getElementById('rememberMe').checked;
+    await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence);
+    await signInWithEmailAndPassword(auth, email, password);
+    setMsg('loginSuccess','✓ Logged in! Welcome back.');
+    setTimeout(closeAuthOverlay, 700);
+  }catch(err){
+    setMsg('loginError', friendlyAuthError(err));
+  }finally{
+    btn.disabled = false; btn.textContent = 'Log In';
+  }
+});
+document.getElementById('loginPassword').addEventListener('keydown', e => { if(e.key === 'Enter') document.getElementById('loginSubmit').click(); });
+
+// SIGN UP
+document.getElementById('signupSubmit').addEventListener('click', async () => {
+  const name = document.getElementById('signupName').value.trim();
+  const email = document.getElementById('signupEmail').value.trim();
+  const password = document.getElementById('signupPassword').value;
+  const password2 = document.getElementById('signupPassword2').value;
+  setMsg('signupError',''); setMsg('signupSuccess','');
+  if(!name || !email || !password || !password2){ setMsg('signupError','Please fill in all fields.'); return; }
+  if(password.length < 6){ setMsg('signupError','Password should be at least 6 characters.'); return; }
+  if(password !== password2){ setMsg('signupError','Passwords do not match.'); return; }
+  const btn = document.getElementById('signupSubmit');
+  btn.disabled = true; btn.textContent = 'Creating account…';
+  try{
+    await setPersistence(auth, browserLocalPersistence);
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    await updateProfile(cred.user, { displayName: name });
+    setMsg('signupSuccess','✓ Account created! Welcome to BLUE-ZONE.');
+    setTimeout(closeAuthOverlay, 900);
+  }catch(err){
+    setMsg('signupError', friendlyAuthError(err));
+  }finally{
+    btn.disabled = false; btn.textContent = 'Create Account';
+  }
+});
+
+// FORGOT PASSWORD
+document.getElementById('forgotSubmit').addEventListener('click', async () => {
+  const email = document.getElementById('forgotEmail').value.trim();
+  setMsg('forgotError',''); setMsg('forgotSuccess','');
+  if(!email){ setMsg('forgotError','Please enter your email.'); return; }
+  const btn = document.getElementById('forgotSubmit');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try{
+    await sendPasswordResetEmail(auth, email);
+    setMsg('forgotSuccess','✓ Reset link sent — check your inbox.');
+  }catch(err){
+    setMsg('forgotError', friendlyAuthError(err));
+  }finally{
+    btn.disabled = false; btn.textContent = 'Send Reset Link';
+  }
+});
+
+// NAV BUTTON / DROPDOWN / LOGOUT
+userAuthBtn.addEventListener('click', () => {
+  if(auth.currentUser){
+    userDropdown.classList.toggle('open');
+  } else {
+    openAuthOverlay('login');
+  }
+});
+document.addEventListener('click', e => {
+  if(!e.target.closest('#userMenu')) userDropdown.classList.remove('open');
+});
+document.getElementById('userLogoutBtn').addEventListener('click', async () => {
+  await signOut(auth);
+  userDropdown.classList.remove('open');
+  showToast('✓ Logged out');
+});
+
+onAuthStateChanged(auth, user => {
+  if(user){
+    const name = user.displayName || (user.email ? user.email.split('@')[0] : 'Member');
+    userAuthLabel.textContent = name;
+    userAuthBtn.title = name;
+    userDropdownName.textContent = name;
+    userDropdownEmail.textContent = user.email || '';
+  } else {
+    userAuthLabel.textContent = 'Log In';
+    userAuthBtn.title = '';
+    userDropdownName.textContent = '';
+    userDropdownEmail.textContent = '';
+  }
+});
+
 const adminLoginOverlay = document.getElementById('adminLoginOverlay');
 const adminPanelOverlay = document.getElementById('adminPanelOverlay');
 document.getElementById('openAdminLogin').addEventListener('click', () => {
