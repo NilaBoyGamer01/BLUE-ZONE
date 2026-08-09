@@ -3,7 +3,7 @@
 //
 // Bump CACHE_VERSION whenever you change index.html, manifest.json, or icons
 // so the browser fetches fresh copies instead of stale cached ones.
-const CACHE_VERSION = 'blue-zone-v1';
+const CACHE_VERSION = 'blue-zone-v2';
 const CACHE_NAME = `blue-zone-cache-${CACHE_VERSION}`;
 
 // The "app shell" — everything needed to render the page while offline.
