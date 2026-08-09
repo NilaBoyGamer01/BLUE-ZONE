@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://nilaboygamer01.github.io/BLUE-ZONE/sitemap.xml
