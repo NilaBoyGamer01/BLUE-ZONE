@@ -12,6 +12,7 @@
     --bg: #060c18; --bg-panel: #0b1830; --bg-panel-2: #0e1f3d;
     --blue: #35d9ff; --blue-soft: #7fe6ff; --blue-deep: #1e63c9; --blue-dark: #0a3a72;
     --lapis: #2f5bd7; --gold: #ffcf4d; --emerald: #3fe08a; --danger:#ff5d6c;
+    --role-blue: #4da3ff; --role-purple: #b478ff;
     --text: #dbe8f7; --text-dim: #85a0c4; --line: #16294a;
   }
   *{ box-sizing:border-box; margin:0; padding:0; }
@@ -183,17 +184,21 @@
   .member-card{ background: var(--bg-panel); border:1px solid var(--line); padding:30px 22px; text-align:center;
     display:flex; flex-direction:column; align-items:center; transition: border-color .25s ease, transform .25s ease, box-shadow .25s ease; }
   .member-card:hover{ border-color: var(--blue-deep); transform: translateY(-5px); box-shadow: 0 14px 26px -14px rgba(53,217,255,0.35); }
-  .member-card.leader{ border-color: var(--gold); }
-  .member-card.leader:hover{ box-shadow: 0 14px 26px -14px rgba(255,207,77,0.4); }
+  .member-card.has-outline{ border-color: var(--outline-color); animation: outlinePulse 2.6s ease-in-out infinite; }
+  .member-card.has-outline:hover{ animation-play-state: paused; box-shadow: 0 14px 26px -14px var(--outline-shadow, var(--outline-color)); }
+  @keyframes outlinePulse{
+    0%, 100%{ box-shadow: 0 0 0 0 var(--outline-shadow, rgba(255,255,255,0.35)), 0 14px 26px -18px transparent; }
+    50%{ box-shadow: 0 0 14px 2px var(--outline-shadow, rgba(255,255,255,0.35)), 0 14px 26px -18px transparent; }
+  }
   .avatar{ width:76px; height:76px; border-radius:50%; display:flex; align-items:center; justify-content:center;
     background: linear-gradient(135deg, var(--blue-dark), var(--lapis)); font-family:'Press Start 2P'; font-size:22px; color: var(--blue-soft);
     box-shadow: 0 0 0 3px var(--bg), 0 0 0 4px var(--blue-deep); margin-bottom:16px; transition: transform .3s ease; }
   .member-card:hover .avatar{ transform: scale(1.08); }
-  .member-card.leader .avatar{ box-shadow: 0 0 0 3px var(--bg), 0 0 0 4px var(--gold); color: var(--gold); }
+  .member-card.has-outline .avatar{ box-shadow: 0 0 0 3px var(--bg), 0 0 0 4px var(--outline-color); color: var(--outline-color); }
   .member-name{ font-size:16px; font-weight:700; }
   .role-badge{ font-family:'JetBrains Mono'; font-size:10.5px; letter-spacing:.6px; text-transform:uppercase; color: var(--blue-soft);
     border:1px solid var(--blue-deep); padding:4px 12px; margin-top:8px; display:inline-block; }
-  .member-card.leader .role-badge{ color: var(--gold); border-color: var(--gold); }
+  .member-card.has-outline .role-badge{ color: var(--outline-color); border-color: var(--outline-color); }
   .member-bio{ font-size:13.5px; color: var(--text-dim); margin-top:14px; max-width:32ch; }
   .member-handle{ font-family:'JetBrains Mono'; font-size:12px; color: var(--text-dim); margin-top:16px; padding-top:14px; border-top:1px solid var(--line); width:100%; }
 
@@ -871,12 +876,12 @@ const DEFAULT_DATA = {
   },
   teamSubtitle: "Seven players who keep the server, the events and the Discord running — say hi in #announcements.",
   team: [
-    { name:"NilaBoyGamer", role:"Leader", bio:"Runs BLUE-ZONE end to end — server, site, and the Discord.", handle:"@nilaboygamer", leader:true, avatar:"" },
-    { name:"BlueX_Ash", role:"Co-Admin", bio:"Keeps the survival world fair and griefer-free.", handle:"@blueX_ash", leader:false, avatar:"" },
-    { name:"Kestrel", role:"Builder Lead", bio:"Runs build competitions and showcase events.", handle:"@kestrel_mc", leader:false, avatar:"" },
-    { name:"Rowan", role:"Moderator", bio:"First responder for support tickets and rule questions.", handle:"@rowan", leader:false, avatar:"" },
-    { name:"Vega", role:"Event Host", bio:"Plans the weekend minigame nights.", handle:"@vega", leader:false, avatar:"" },
-    { name:"Juno", role:"Community Manager", bio:"Keeps announcements and the gallery fresh.", handle:"@juno", leader:false, avatar:"" }
+    { name:"NilaBoyGamer", role:"Leader", bio:"Runs BLUE-ZONE end to end — server, site, and the Discord.", handle:"@nilaboygamer", outline:"gold", avatar:"" },
+    { name:"BlueX_Ash", role:"Co-Admin", bio:"Keeps the survival world fair and griefer-free.", handle:"@blueX_ash", outline:"blue", avatar:"" },
+    { name:"Kestrel", role:"Builder Lead", bio:"Runs build competitions and showcase events.", handle:"@kestrel_mc", outline:"none", avatar:"" },
+    { name:"Rowan", role:"Moderator", bio:"First responder for support tickets and rule questions.", handle:"@rowan", outline:"none", avatar:"" },
+    { name:"Vega", role:"Event Host", bio:"Plans the weekend minigame nights.", handle:"@vega", outline:"none", avatar:"" },
+    { name:"Juno", role:"Community Manager", bio:"Keeps announcements and the gallery fresh.", handle:"@juno", outline:"none", avatar:"" }
   ],
   news: [
     { date_day:"09", date_mon:"AUG", title:"New spawn build finished", body:"The community spawn hub got a full glow-up — come check the new build." },
@@ -889,6 +894,21 @@ const DEFAULT_DATA = {
 };
 
 let siteData = JSON.parse(JSON.stringify(DEFAULT_DATA));
+
+// Role outline colors, editable per team member in the admin panel.
+const ROLE_OUTLINE_COLORS = {
+  gold:   { hex:"#ffcf4d", rgb:"255,207,77",  label:"Gold — Leader" },
+  blue:   { hex:"#4da3ff", rgb:"77,163,255",  label:"Blue — Co-Admin" },
+  green:  { hex:"#3fe08a", rgb:"63,224,138",  label:"Green — Admin" },
+  red:    { hex:"#ff5d6c", rgb:"255,93,108",  label:"Red — PvP Warrior" },
+  purple: { hex:"#b478ff", rgb:"180,120,255", label:"Purple — Loot Collector" }
+};
+// Older saved data used a `leader` boolean instead of `outline`.
+function memberOutline(m){
+  if(m.outline && m.outline !== 'none') return m.outline;
+  if(!m.outline && m.leader) return 'gold';
+  return 'none';
+}
 
 // Load the small text content first — this is what the home page needs, so
 // it loads fast regardless of how many gallery photos exist.
@@ -1049,14 +1069,20 @@ function renderAll(){
 
   document.getElementById('teamSubtitle').textContent = siteData.teamSubtitle;
   const teamGrid = document.getElementById('teamGrid');
-  teamGrid.innerHTML = siteData.team.map(m => `
-    <div class="member-card ${m.leader ? 'leader' : ''}">
+  teamGrid.innerHTML = siteData.team.map(m => {
+    const key = memberOutline(m);
+    const c = ROLE_OUTLINE_COLORS[key];
+    const cardClass = c ? 'member-card has-outline' : 'member-card';
+    const cardStyle = c ? ` style="--outline-color:${c.hex}; --outline-shadow: rgba(${c.rgb},0.4);"` : '';
+    return `
+    <div class="${cardClass}"${cardStyle}>
       <div class="avatar">${m.avatar ? `<img src="${m.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : initials(m.name)}</div>
       <div class="member-name">${escapeHtml(m.name)}</div>
       <div class="role-badge">${escapeHtml(m.role)}</div>
       <p class="member-bio">${escapeHtml(m.bio)}</p>
       <div class="member-handle">${escapeHtml(m.handle)}</div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 
   const newsList = document.getElementById('newsList');
   newsList.innerHTML = siteData.news.length ? siteData.news.map(n => `
@@ -1294,15 +1320,21 @@ function renderTeamEdit(){
         </div>
         <div class="field"><label>Bio</label><textarea data-team="${i}" data-field="bio">${escapeHtml(m.bio)}</textarea></div>
         <div class="field"><label>Discord Handle</label><input type="text" data-team="${i}" data-field="handle" value="${escapeHtml(m.handle)}"></div>
-        <label style="display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-dim);">
-          <input type="checkbox" data-team="${i}" data-field="leader" ${m.leader ? 'checked' : ''}> Leader (gold highlight)
-        </label>
+        <div class="field">
+          <label>Outline color</label>
+          <select data-team="${i}" data-field="outline">
+            <option value="none" ${memberOutline(m) === 'none' ? 'selected' : ''}>None</option>
+            ${Object.entries(ROLE_OUTLINE_COLORS).map(([key, c]) => `<option value="${key}" ${memberOutline(m) === key ? 'selected' : ''}>${c.label}</option>`).join('')}
+          </select>
+        </div>
       </div>
     </div>`).join('');
-  list.querySelectorAll('input[type=text],textarea,input[type=checkbox]').forEach(el => {
-    el.addEventListener('input', () => {
+  list.querySelectorAll('input[type=text],textarea,select').forEach(el => {
+    const evt = el.tagName === 'SELECT' ? 'change' : 'input';
+    el.addEventListener(evt, () => {
       const i = el.dataset.team, f = el.dataset.field;
-      siteData.team[i][f] = el.type === 'checkbox' ? el.checked : el.value;
+      siteData.team[i][f] = el.value;
+      if(f === 'outline') delete siteData.team[i].leader; // outline now supersedes the old leader flag
       if(f === 'name'){
         // Keep the initials fallback in the avatar preview in sync while typing.
         const preview = list.querySelectorAll('.avatar-edit-preview')[i];
@@ -1333,7 +1365,7 @@ function renderTeamEdit(){
   });
 }
 document.getElementById('addTeamMember').addEventListener('click', () => {
-  siteData.team.push({ name:"New Member", role:"Role", bio:"Bio here.", handle:"@handle", leader:false, avatar:"" });
+  siteData.team.push({ name:"New Member", role:"Role", bio:"Bio here.", handle:"@handle", outline:"none", avatar:"" });
   renderTeamEdit();
 });
 
