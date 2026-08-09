@@ -794,7 +794,16 @@ const firebaseConfig = {
 };
 const fbApp = initializeApp(firebaseConfig);
 const db = getDatabase(fbApp);
-const siteDataRef = ref(db, 'siteData');
+// Split into two nodes: 'siteMeta' is small (text content) and loads fast for
+// the home page. 'gallery' holds the (larger) photo data and loads separately
+// in the background so it never blocks the rest of the site.
+const siteMetaRef = ref(db, 'siteMeta');
+const galleryRef = ref(db, 'gallery');
+function withoutGallery(data){
+  const copy = JSON.parse(JSON.stringify(data));
+  delete copy.gallery;
+  return copy;
+}
 
 /* ===================== DEFAULT DATA ===================== */
 const ADMIN_PASSWORD_HASH = "f93085caa22a9507c470d8fd036a054d95818faa987b5e22ffedf1d1db0ac485"; // "blue@2026"
@@ -842,42 +851,107 @@ const DEFAULT_DATA = {
 
 let siteData = JSON.parse(JSON.stringify(DEFAULT_DATA));
 
-// Load site data from Firebase Realtime Database. If nothing is there yet
-// (first run), seed the database with DEFAULT_DATA so future visitors and
-// the admin panel have something to read/write.
-async function loadData(){
+// Load the small text content first — this is what the home page needs, so
+// it loads fast regardless of how many gallery photos exist.
+async function loadSiteMeta(){
   try{
-    const snapshot = await get(siteDataRef);
+    const snapshot = await get(siteMetaRef);
     if(snapshot.exists()){
       return snapshot.val();
     } else {
-      const seed = JSON.parse(JSON.stringify(DEFAULT_DATA));
-      await set(siteDataRef, seed);
+      const seed = withoutGallery(DEFAULT_DATA);
+      await set(siteMetaRef, seed);
       return seed;
     }
   }catch(e){
     console.error('Firebase load failed, falling back to local defaults:', e);
-    return JSON.parse(JSON.stringify(DEFAULT_DATA));
+    return withoutGallery(DEFAULT_DATA);
   }
 }
 
-// Save the current siteData object to Firebase.
-async function saveData(){
+// Load gallery photos separately, in the background.
+async function loadGallery(){
   try{
-    await set(siteDataRef, siteData);
+    const snapshot = await get(galleryRef);
+    if(snapshot.exists()) return snapshot.val();
+    await set(galleryRef, DEFAULT_DATA.gallery);
+    return JSON.parse(JSON.stringify(DEFAULT_DATA.gallery));
+  }catch(e){
+    console.error('Firebase gallery load failed:', e);
+    return [];
+  }
+}
+
+// Save everything except gallery photos (hero, stats, about, team, news, reviews).
+async function saveSiteMeta(){
+  try{
+    await set(siteMetaRef, withoutGallery(siteData));
+    return true;
   }catch(e){
     console.error('Firebase save failed:', e);
     showToast('⚠ Save failed — check connection');
+    return false;
   }
 }
 
-// Optional: keep this tab in sync if the data changes elsewhere
-// (e.g. another admin editing at the same time, or another open tab).
-onValue(siteDataRef, (snapshot) => {
+// Save just the gallery photos.
+async function saveGalleryData(){
+  try{
+    await set(galleryRef, siteData.gallery);
+    return true;
+  }catch(e){
+    console.error('Firebase gallery save failed:', e);
+    showToast('⚠ Upload failed — photo may be too large or connection dropped');
+    return false;
+  }
+}
+
+// Keep this tab in sync if content changes elsewhere (another admin editing,
+// or another open tab). Site text and gallery are watched independently so a
+// new photo elsewhere doesn't re-render the whole page unnecessarily.
+onValue(siteMetaRef, (snapshot) => {
   if(!snapshot.exists()) return;
-  siteData = snapshot.val();
+  const meta = snapshot.val();
+  siteData = { ...siteData, ...meta };
   renderAll();
 });
+onValue(galleryRef, (snapshot) => {
+  siteData.gallery = snapshot.exists() ? snapshot.val() : [];
+  renderGallery();
+  if(adminPanelOverlay.classList.contains('open')) renderGalleryEdit();
+});
+
+/* ===================== IMAGE COMPRESSION ===================== */
+// Resizes + re-encodes an uploaded image client-side before it's stored, so
+// full-resolution phone photos (often 3-8MB) don't bloat the database or
+// fail to upload. Caps the longest side and re-encodes as JPEG.
+function compressImageFile(file, maxDim = 1280, quality = 0.75){
+  return new Promise((resolve, reject) => {
+    if(!file.type || !file.type.startsWith('image/')){
+      reject(new Error('Please choose an image file.'));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Could not read that file.'));
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Could not read that image.'));
+      img.onload = () => {
+        let { width, height } = img;
+        if(width > maxDim || height > maxDim){
+          if(width >= height){ height = Math.round(height * (maxDim / width)); width = maxDim; }
+          else { width = Math.round(width * (maxDim / height)); height = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 /* ===================== TAB NAVIGATION ===================== */
 const tabLinks = document.querySelectorAll('[data-tab]');
@@ -1035,25 +1109,50 @@ function showToast(msg){
 
 /* ===================== GALLERY UPLOAD ===================== */
 let pendingGalleryImg = null;
-document.getElementById('galUploadFile').addEventListener('change', (e) => {
+const GAL_UPLOAD_DEFAULT_ERROR = document.getElementById('galUploadError').textContent;
+document.getElementById('galUploadFile').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if(!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    pendingGalleryImg = ev.target.result;
-    const thumb = document.getElementById('galUploadThumb');
+  const errEl = document.getElementById('galUploadError');
+  const thumb = document.getElementById('galUploadThumb');
+  try{
+    pendingGalleryImg = await compressImageFile(file);
+    errEl.classList.remove('show');
     thumb.src = pendingGalleryImg; thumb.style.display = 'block';
-  };
-  reader.readAsDataURL(file);
+  }catch(err){
+    console.error(err);
+    pendingGalleryImg = null;
+    thumb.style.display = 'none';
+    errEl.textContent = err.message || 'Could not process that photo — try a different one.';
+    errEl.classList.add('show');
+  }
 });
-document.getElementById('submitGalleryUpload').addEventListener('click', () => {
+document.getElementById('submitGalleryUpload').addEventListener('click', async () => {
   const title = document.getElementById('galUploadTitle').value.trim() || 'Untitled build';
   const builder = document.getElementById('galUploadBuilder').value.trim() || 'Anonymous';
   const errEl = document.getElementById('galUploadError');
-  if(!pendingGalleryImg){ errEl.classList.add('show'); return; }
+  const btn = document.getElementById('submitGalleryUpload');
+  if(!pendingGalleryImg){
+    errEl.textContent = GAL_UPLOAD_DEFAULT_ERROR;
+    errEl.classList.add('show');
+    return;
+  }
   errEl.classList.remove('show');
+  btn.disabled = true;
+  const originalLabel = btn.textContent;
+  btn.textContent = 'Uploading…';
   siteData.gallery.unshift({ img: pendingGalleryImg, title, builder });
-  saveData(); renderGallery();
+  renderGallery();
+  const ok = await saveGalleryData();
+  btn.disabled = false;
+  btn.textContent = originalLabel;
+  if(!ok){
+    siteData.gallery.shift();
+    renderGallery();
+    errEl.textContent = 'Upload failed — check your connection and try again.';
+    errEl.classList.add('show');
+    return;
+  }
   document.getElementById('galUploadMsg').classList.add('show');
   document.getElementById('galUploadTitle').value = ''; document.getElementById('galUploadBuilder').value = '';
   document.getElementById('galUploadThumb').style.display = 'none'; document.getElementById('galUploadFile').value = '';
@@ -1076,7 +1175,7 @@ document.getElementById('submitReview').addEventListener('click', () => {
   if(!name || !text || !selectedStars){ errEl.classList.add('show'); return; }
   errEl.classList.remove('show');
   siteData.reviews.unshift({ name, stars: selectedStars, text, date: new Date().toLocaleDateString(undefined,{month:'short', year:'numeric'}) });
-  saveData(); renderReviews();
+  saveSiteMeta(); renderReviews();
   document.getElementById('reviewFormMsg').classList.add('show');
   document.getElementById('reviewName').value=''; document.getElementById('reviewText').value='';
   selectedStars = 0; document.querySelectorAll('#reviewStarPicker button').forEach(b => b.classList.remove('filled'));
@@ -1185,11 +1284,15 @@ function renderGalleryEdit(){
     el.addEventListener('input', () => { siteData.gallery[el.dataset.gallery][el.dataset.field] = el.value; });
   });
   grid.querySelectorAll('[data-gallery-file]').forEach(fileInput => {
-    fileInput.addEventListener('change', e => {
+    fileInput.addEventListener('change', async e => {
       const file = e.target.files[0]; if(!file) return;
-      const reader = new FileReader();
-      reader.onload = ev => { siteData.gallery[fileInput.dataset.galleryFile].img = ev.target.result; renderGalleryEdit(); };
-      reader.readAsDataURL(file);
+      try{
+        siteData.gallery[fileInput.dataset.galleryFile].img = await compressImageFile(file);
+        renderGalleryEdit();
+      }catch(err){
+        console.error(err);
+        alert(err.message || 'Could not process that photo.');
+      }
     });
   });
   grid.querySelectorAll('[data-remove-gallery]').forEach(btn => {
@@ -1259,7 +1362,7 @@ document.getElementById('addReviewItem').addEventListener('click', () => {
   renderReviewsEdit();
 });
 
-document.getElementById('saveAdminChanges').addEventListener('click', () => {
+document.getElementById('saveAdminChanges').addEventListener('click', async () => {
   siteData.hero.title = document.getElementById('editHeroTitle').value;
   siteData.hero.lead = document.getElementById('editHeroLead').value;
   siteData.stats.members = document.getElementById('editStatMembers').value;
@@ -1269,13 +1372,15 @@ document.getElementById('saveAdminChanges').addEventListener('click', () => {
   siteData.about.story2 = document.getElementById('editAbout2').value;
   siteData.about.goals = document.getElementById('editGoals').value.split('\n').map(s => s.trim()).filter(Boolean);
   siteData.teamSubtitle = document.getElementById('editTeamSubtitle').value;
-  saveData(); renderAll();
+  await Promise.all([saveSiteMeta(), saveGalleryData()]);
+  renderAll();
   showToast('✓ Changes saved');
 });
-document.getElementById('resetDefaults').addEventListener('click', () => {
+document.getElementById('resetDefaults').addEventListener('click', async () => {
   if(!confirm('Reset all content back to the default? This cannot be undone.')) return;
   siteData = JSON.parse(JSON.stringify(DEFAULT_DATA));
-  saveData(); renderAll(); openAdminPanel();
+  await Promise.all([saveSiteMeta(), saveGalleryData()]);
+  renderAll(); openAdminPanel();
   showToast('✓ Reset to default');
 });
 adminPanelOverlay.addEventListener('click', e => { if(e.target === adminPanelOverlay) adminPanelOverlay.classList.remove('open'); });
@@ -1283,9 +1388,19 @@ adminLoginOverlay.addEventListener('click', e => { if(e.target === adminLoginOve
 
 /* ===================== INIT ===================== */
 (async () => {
-  siteData = await loadData();
+  // Load and render the fast, small text content first.
+  const meta = await loadSiteMeta();
+  siteData = { ...meta, gallery: [] };
   renderAll();
   revealVisible();
+
+  // Load gallery photos separately in the background so they never delay
+  // the initial page render.
+  loadGallery().then(gallery => {
+    siteData.gallery = gallery;
+    renderGallery();
+    if(adminPanelOverlay.classList.contains('open')) renderGalleryEdit();
+  });
 })();
 </script>
 </body>
