@@ -775,7 +775,27 @@
 
 <div class="save-toast" id="saveToast">✓ Changes saved</div>
 
-<script>
+<script type="module">
+/* ===================== FIREBASE SETUP ===================== */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getDatabase, ref, get, set, onValue
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBOFvYiRzba5xS8KczSaqU0G0TbtBGoe8c",
+  authDomain: "blue-zone-71816.firebaseapp.com",
+  databaseURL: "https://blue-zone-71816-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "blue-zone-71816",
+  storageBucket: "blue-zone-71816.firebasestorage.app",
+  messagingSenderId: "273471219018",
+  appId: "1:273471219018:web:46dde84bc63957ce3d0db3",
+  measurementId: "G-TP93NNVPRF"
+};
+const fbApp = initializeApp(firebaseConfig);
+const db = getDatabase(fbApp);
+const siteDataRef = ref(db, 'siteData');
+
 /* ===================== DEFAULT DATA ===================== */
 const ADMIN_PASSWORD_HASH = "f93085caa22a9507c470d8fd036a054d95818faa987b5e22ffedf1d1db0ac485"; // "blue@2026"
 async function sha256Hex(text){
@@ -820,17 +840,44 @@ const DEFAULT_DATA = {
   ]
 };
 
-let siteData = loadData();
-function loadData(){
+let siteData = JSON.parse(JSON.stringify(DEFAULT_DATA));
+
+// Load site data from Firebase Realtime Database. If nothing is there yet
+// (first run), seed the database with DEFAULT_DATA so future visitors and
+// the admin panel have something to read/write.
+async function loadData(){
   try{
-    const raw = localStorage.getItem('bluezoneSiteData');
-    if(raw) return JSON.parse(raw);
-  }catch(e){}
-  return JSON.parse(JSON.stringify(DEFAULT_DATA));
+    const snapshot = await get(siteDataRef);
+    if(snapshot.exists()){
+      return snapshot.val();
+    } else {
+      const seed = JSON.parse(JSON.stringify(DEFAULT_DATA));
+      await set(siteDataRef, seed);
+      return seed;
+    }
+  }catch(e){
+    console.error('Firebase load failed, falling back to local defaults:', e);
+    return JSON.parse(JSON.stringify(DEFAULT_DATA));
+  }
 }
-function saveData(){
-  try{ localStorage.setItem('bluezoneSiteData', JSON.stringify(siteData)); }catch(e){}
+
+// Save the current siteData object to Firebase.
+async function saveData(){
+  try{
+    await set(siteDataRef, siteData);
+  }catch(e){
+    console.error('Firebase save failed:', e);
+    showToast('⚠ Save failed — check connection');
+  }
 }
+
+// Optional: keep this tab in sync if the data changes elsewhere
+// (e.g. another admin editing at the same time, or another open tab).
+onValue(siteDataRef, (snapshot) => {
+  if(!snapshot.exists()) return;
+  siteData = snapshot.val();
+  renderAll();
+});
 
 /* ===================== TAB NAVIGATION ===================== */
 const tabLinks = document.querySelectorAll('[data-tab]');
@@ -961,20 +1008,22 @@ function renderReviews(){
     return;
   }
   document.getElementById('reviewsSummary').style.display = 'flex';
-  const avg = siteData.reviews.reduce((s,r) => s + r.stars, 0) / siteData.reviews.length;
+  const validStars = siteData.reviews.map(r => Number(r.stars) || 0);
+  const avg = validStars.reduce((s,n) => s + n, 0) / validStars.length;
   document.getElementById('reviewsAvgScore').textContent = avg.toFixed(1);
-  document.getElementById('reviewsAvgStars').textContent = starString(Math.round(avg));
+  document.getElementById('reviewsAvgStars').innerHTML = starString(Math.round(avg));
   document.getElementById('reviewsCount').textContent = `Based on ${siteData.reviews.length} review${siteData.reviews.length === 1 ? '' : 's'}`;
   grid.innerHTML = siteData.reviews.map(r => `
     <div class="review-card">
       <div class="review-card-top">
         <div><div class="review-name">${escapeHtml(r.name)}</div><div class="review-date">${escapeHtml(r.date)}</div></div>
-        <div class="stars">${starString(r.stars)}</div>
+        <div class="stars">${starString(Number(r.stars) || 0)}</div>
       </div>
       <p class="review-text">${escapeHtml(r.text)}</p>
     </div>`).join('');
 }
 function starString(n){
+  n = Math.max(0, Math.min(5, Math.round(n) || 0));
   return '★'.repeat(n) + `<span class="star-off">${'★'.repeat(5-n)}</span>`;
 }
 function showToast(msg){
@@ -1233,8 +1282,11 @@ adminPanelOverlay.addEventListener('click', e => { if(e.target === adminPanelOve
 adminLoginOverlay.addEventListener('click', e => { if(e.target === adminLoginOverlay) adminLoginOverlay.classList.remove('open'); });
 
 /* ===================== INIT ===================== */
-renderAll();
-revealVisible();
+(async () => {
+  siteData = await loadData();
+  renderAll();
+  revealVisible();
+})();
 </script>
 </body>
 </html>
