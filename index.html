@@ -798,6 +798,25 @@ function outlineHex(m){
   return null;
 }
 
+// Turns a raw Firebase error into a short, diagnosable message instead of a
+// generic "check your connection" — surfaces it in the admin alert banner
+// (if the panel is open) and logs it to the shared activity log, so a
+// permission-denied from the Database Rules (the most common cause of
+// "my changes aren't saving") is immediately visible instead of hidden.
+function reportFirebaseError(action, err){
+  const code = (err && (err.code || err.name)) || 'unknown_error';
+  const detail = (err && err.message) ? err.message : String(err);
+  let hint = '';
+  if(/permission[_-]denied/i.test(code) || /permission[_-]denied/i.test(detail)){
+    hint = ' — the Firebase Database Rules are blocking this write/read. Check Firebase Console → Realtime Database → Rules.';
+  } else if(/network/i.test(code) || /network/i.test(detail)){
+    hint = ' — network/connection issue. Check your internet connection and try again.';
+  }
+  const message = `Firebase error during "${action}": ${code}${hint}`;
+  fireAlert(message);
+  logActivity('firebase_error', `${action}: ${code} — ${detail}`.slice(0, 300));
+}
+
 // Load the small text content first — this is what the home page needs, so
 // it loads fast regardless of how many gallery photos exist.
 async function loadSiteMeta(){
@@ -814,6 +833,7 @@ async function loadSiteMeta(){
     return seed;
   }catch(e){
     console.error('Firebase load failed, falling back to local defaults:', e);
+    reportFirebaseError('load site content', e);
     return withoutGallery(DEFAULT_DATA);
   }
 }
@@ -829,6 +849,7 @@ async function loadGallery(){
     return JSON.parse(JSON.stringify(seed));
   }catch(e){
     console.error('Firebase gallery load failed:', e);
+    reportFirebaseError('load gallery', e);
     return [];
   }
 }
@@ -842,6 +863,7 @@ async function loadApplications(){
     return [];
   }catch(e){
     console.error('Firebase applications load failed:', e);
+    reportFirebaseError('load applications', e);
     return [];
   }
 }
@@ -854,7 +876,8 @@ async function saveSiteMeta(){
     return true;
   }catch(e){
     console.error('Firebase save failed:', e);
-    showToast('⚠ Save failed — check connection');
+    reportFirebaseError('save site content', e);
+    showToast(`⚠ Save failed — ${(e && (e.code || e.message)) || 'check connection'}`);
     return false;
   }
 }
@@ -867,7 +890,8 @@ async function saveGalleryData(){
     return true;
   }catch(e){
     console.error('Firebase gallery save failed:', e);
-    showToast('⚠ Upload failed — photo may be too large or connection dropped');
+    reportFirebaseError('save gallery', e);
+    showToast(`⚠ Upload failed — ${(e && (e.code || e.message)) || 'photo may be too large or connection dropped'}`);
     return false;
   }
 }
@@ -880,7 +904,8 @@ async function saveApplicationsData(){
     return true;
   }catch(e){
     console.error('Firebase applications save failed:', e);
-    showToast('⚠ Could not save — check your connection');
+    reportFirebaseError('save applications', e);
+    showToast(`⚠ Could not save — ${(e && (e.code || e.message)) || 'check your connection'}`);
     return false;
   }
 }
@@ -1484,7 +1509,7 @@ function actionLabel(action){
     logout: '🚪 Admin logged out', idle_logout: '⏱ Auto logged out (inactivity)',
     approve_application: '✔ Application approved', reject_application: '✕ Application rejected',
     content_save: '📝 Site content saved', gallery_save: '🖼 Gallery updated', applications_save: '📋 Applications updated',
-    new_device: '⚠ Login from new device'
+    new_device: '⚠ Login from new device', firebase_error: '🔥 Firebase error'
   };
   return labels[action] || action;
 }
@@ -1640,19 +1665,33 @@ document.getElementById('signupSubmit').addEventListener('click', async () => {
   if(password !== password2){ setMsg('signupError','Passwords do not match.'); return; }
   const btn = document.getElementById('signupSubmit');
   btn.disabled = true; btn.textContent = 'Creating account…';
+  let cred;
   try{
     await setPersistence(auth, browserLocalPersistence);
-    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    cred = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(cred.user, { displayName: name });
-    await set(ref(db, 'users/' + cred.user.uid), { displayName: name, photo: signupAvatarData || '' });
-    resetSignupAvatar();
-    setMsg('signupSuccess','✓ Account created! Welcome to BLUE-ZONE.');
-    setTimeout(closeAuthOverlay, 900);
   }catch(err){
+    // Account creation itself failed — nothing was created, safe to show the
+    // error and let the person retry from the same form.
     setMsg('signupError', friendlyAuthError(err));
-  }finally{
     btn.disabled = false; btn.textContent = 'Create Account';
+    return;
   }
+  // The auth account already exists and the person is signed in at this
+  // point. A failure saving the extra profile fields (display name/photo) to
+  // the database is a secondary, non-fatal problem — don't show a scary
+  // "signup failed" message or strand them in the modal, since their account
+  // is real and they're logged in; just log it so it can be diagnosed.
+  try{
+    await set(ref(db, 'users/' + cred.user.uid), { displayName: name, photo: signupAvatarData || '' });
+  }catch(err){
+    console.error('Saving profile data failed (account was still created):', err);
+    reportFirebaseError('save new account profile', err);
+  }
+  resetSignupAvatar();
+  setMsg('signupSuccess','✓ Account created! Welcome to BLUE-ZONE.');
+  btn.disabled = false; btn.textContent = 'Create Account';
+  setTimeout(closeAuthOverlay, 900);
 });
 
 // FORGOT PASSWORD
@@ -1800,6 +1839,7 @@ document.getElementById('profileSave').addEventListener('click', async () => {
     setTimeout(() => profileOverlay.classList.remove('open'), 800);
   }catch(err){
     setMsg('profileError', friendlyAuthError(err));
+    reportFirebaseError('save profile', err);
   }finally{
     btn.disabled = false; btn.textContent = 'Save Changes';
   }
@@ -2286,16 +2326,20 @@ document.getElementById('saveAdminChanges').addEventListener('click', async () =
   siteData.about.story2 = document.getElementById('editAbout2').value;
   siteData.about.goals = document.getElementById('editGoals').value.split('\n').map(s => s.trim()).filter(Boolean);
   siteData.teamSubtitle = document.getElementById('editTeamSubtitle').value;
-  await Promise.all([saveSiteMeta(), saveGalleryData()]);
+  const [metaOk, galleryOk] = await Promise.all([saveSiteMeta(), saveGalleryData()]);
   renderAll();
-  showToast('✓ Changes saved');
+  // Both saveSiteMeta() and saveGalleryData() resolve to false (and already
+  // log the real Firebase error) when the write is rejected — surface that
+  // instead of always claiming success, so a blocked save is never mistaken
+  // for a completed one.
+  showToast(metaOk && galleryOk ? '✓ Changes saved' : '⚠ Some changes failed to save — see Activity Log for details');
 });
 document.getElementById('resetDefaults').addEventListener('click', async () => {
   if(!confirm('Reset all content back to the default? This cannot be undone.')) return;
   siteData = JSON.parse(JSON.stringify(DEFAULT_DATA));
-  await Promise.all([saveSiteMeta(), saveGalleryData(), saveApplicationsData()]);
+  const [metaOk, galleryOk, appsOk] = await Promise.all([saveSiteMeta(), saveGalleryData(), saveApplicationsData()]);
   renderAll(); openAdminPanel();
-  showToast('✓ Reset to default');
+  showToast(metaOk && galleryOk && appsOk ? '✓ Reset to default' : '⚠ Reset only partially saved — see Activity Log for details');
 });
 adminPanelOverlay.addEventListener('click', e => { if(e.target === adminPanelOverlay) adminPanelOverlay.classList.remove('open'); });
 adminLoginOverlay.addEventListener('click', e => { if(e.target === adminLoginOverlay) adminLoginOverlay.classList.remove('open'); });
