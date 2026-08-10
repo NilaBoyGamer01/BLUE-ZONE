@@ -274,6 +274,32 @@
   .rules-box li::before{ content: counter(rule); font-family:'JetBrains Mono'; color: var(--blue); flex:none;
     width:20px; height:20px; border:1px solid var(--blue-deep); display:flex; align-items:center; justify-content:center; font-size:11px; }
 
+  /* ---------------- SERVER ---------------- */
+  .server-panel{ position:relative; background: linear-gradient(135deg, rgba(53,217,255,0.09), rgba(47,91,215,0.09));
+    border:1px solid var(--blue-deep); overflow:hidden; }
+  .server-pixel-strip{ height:7px; background-image: linear-gradient(90deg, var(--blue) 0 14px, transparent 14px 28px);
+    background-size:28px 7px; opacity:.5; }
+  .server-panel-inner{ padding:64px 32px; display:flex; flex-direction:column; align-items:center; text-align:center; gap:28px; }
+  .server-status-badge{ position:relative; display:inline-flex; align-items:center; gap:16px;
+    padding:26px 46px; background: var(--bg-panel); border:3px solid var(--blue);
+    box-shadow: 0 0 0 7px rgba(53,217,255,0.10), 0 0 46px rgba(53,217,255,0.35); }
+  .server-dot-pulse{ width:14px; height:14px; border-radius:50%; background: var(--gold); flex:none;
+    box-shadow: 0 0 14px var(--gold); animation: serverDotPulse 1.6s ease-in-out infinite; }
+  @keyframes serverDotPulse{ 0%,100%{ transform:scale(1); opacity:1; } 50%{ transform:scale(1.35); opacity:.55; } }
+  .server-status-text{ font-family:'Press Start 2P'; font-size:30px; letter-spacing:4px; color: var(--blue-soft);
+    text-shadow: 0 0 18px var(--blue), 0 0 40px rgba(53,217,255,0.5); }
+  .server-panel-note{ color: var(--text-dim); font-size:14.5px; max-width:52ch; }
+  @media (max-width:720px){
+    .server-panel-inner{ padding:48px 20px; gap:22px; }
+    .server-status-badge{ padding:20px 28px; gap:12px; }
+    .server-status-text{ font-size:20px; letter-spacing:2.5px; }
+  }
+  @media (max-width:400px){
+    .server-status-text{ font-size:16px; letter-spacing:1.5px; }
+    .server-status-badge{ padding:16px 20px; }
+  }
+  @media (prefers-reduced-motion: reduce){ .server-dot-pulse{ animation:none !important; } }
+
   /* ---------------- NEWS ---------------- */
   .news-list{ display:flex; flex-direction:column; }
   .news-item{ display:grid; grid-template-columns:110px 1fr; gap:24px; padding:24px 0; border-bottom:1px solid var(--line); }
@@ -381,6 +407,14 @@
   .error-msg{ color: var(--danger); font-size:13px; margin-top:10px; display:none; }
   .error-msg.show{ display:block; }
   .hint{ font-size:12px; color: var(--text-dim); margin-top:-8px; margin-bottom:16px; }
+
+  .review-login-notice{ background: var(--bg-panel-2); border:1px solid var(--blue-deep); padding:18px 20px; display:flex; flex-wrap:wrap; align-items:center; gap:14px; justify-content:space-between; }
+  .review-login-text{ color: var(--text-dim); font-size:13.5px; flex:1 1 240px; }
+  .review-posting-as{ display:flex; align-items:center; gap:10px; background: var(--bg); border:1px solid var(--line); padding:10px 13px; font-size:13.5px; }
+  .review-posting-avatar{ width:26px; height:26px; border-radius:50%; flex:none; display:flex; align-items:center; justify-content:center;
+    background: var(--blue-dark); color: var(--blue-soft); font-family:'JetBrains Mono'; font-size:11px; overflow:hidden; }
+  .review-posting-avatar img{ width:100%; height:100%; object-fit:cover; }
+  @media (max-width:480px){ .review-login-notice{ flex-direction:column; align-items:stretch; text-align:center; } }
 
   /* ---------------- CONTACT / CTA ---------------- */
   .cta-band{ background: linear-gradient(135deg, rgba(53,217,255,0.09), rgba(47,91,215,0.09)); border:1px solid var(--blue-deep); padding:48px; text-align:center; }
@@ -570,6 +604,7 @@
         <li><button class="tab-link active" data-tab="home">Home</button></li>
         <li><button class="tab-link" data-tab="about">About</button></li>
         <li><button class="tab-link" data-tab="team">BlueX Team</button></li>
+        <li><button class="tab-link" data-tab="server">Server</button></li>
         <li><button class="tab-link" data-tab="discord">Discord</button></li>
         <li><button class="tab-link" data-tab="news">News</button></li>
         <li><button class="tab-link" data-tab="gallery">Gallery</button></li>
@@ -684,6 +719,26 @@
     </div>
   </section>
 
+  <!-- SERVER -->
+  <section id="tab-server" class="tab-panel">
+    <div class="section-head reveal">
+      <div class="eyebrow">Server</div>
+      <h2>Ready to drop<br>into the zone</h2>
+    </div>
+    <div class="server-panel reveal">
+      <div class="server-pixel-strip" aria-hidden="true"></div>
+      <div class="server-panel-inner">
+        <div class="server-status-badge">
+          <span class="server-dot-pulse" aria-hidden="true"></span>
+          <span class="server-status-text">UPCOMING</span>
+        </div>
+        <p class="server-panel-note">The BLUE-ZONE Minecraft server is being built right now. IP, port, launch date and everything else will be posted right here the moment we go live.</p>
+        <a class="btn btn-primary" href="https://discord.gg/a5vNKwJJQ" target="_blank" rel="noopener">Get notified on Discord</a>
+      </div>
+      <div class="server-pixel-strip" aria-hidden="true"></div>
+    </div>
+  </section>
+
   <!-- DISCORD -->
   <section id="tab-discord" class="tab-panel">
     <div class="section-head reveal">
@@ -772,21 +827,33 @@
     <div class="reviews-grid reveal" id="reviewsGrid"></div>
     <div class="review-form reveal" id="reviewForm">
       <h3>WRITE A REVIEW</h3>
-      <div class="field"><label>Your Name</label><input type="text" id="reviewName" placeholder="e.g. Notch_Fan22" maxlength="40"></div>
-      <div class="field">
-        <label>Rating</label>
-        <div class="star-picker" id="reviewStarPicker">
-          <button type="button" data-star="1">★</button>
-          <button type="button" data-star="2">★</button>
-          <button type="button" data-star="3">★</button>
-          <button type="button" data-star="4">★</button>
-          <button type="button" data-star="5">★</button>
-        </div>
+      <div class="review-login-notice" id="reviewLoginNotice">
+        <p class="review-login-text">You need to be logged in to write a review, so it's always tied to a real BLUE-ZONE account.</p>
+        <button type="button" class="btn btn-primary btn-sm" id="reviewLoginBtn">Log In</button>
       </div>
-      <div class="field"><label>Your Review</label><textarea id="reviewText" placeholder="Tell us what you think of the server..." maxlength="400"></textarea></div>
-      <div class="error-msg" id="reviewFormError">Please add your name, a star rating, and a short review.</div>
-      <button class="btn btn-primary" id="submitReview">Submit Review</button>
-      <p class="review-form-msg" id="reviewFormMsg">✓ Thanks — your review has been posted!</p>
+      <div id="reviewFormFields" style="display:none;">
+        <div class="field">
+          <label>Posting As</label>
+          <div class="review-posting-as" id="reviewPostingAs">
+            <span class="review-posting-avatar" id="reviewPostingAvatar">👤</span>
+            <span id="reviewPostingName">Member</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Rating</label>
+          <div class="star-picker" id="reviewStarPicker">
+            <button type="button" data-star="1">★</button>
+            <button type="button" data-star="2">★</button>
+            <button type="button" data-star="3">★</button>
+            <button type="button" data-star="4">★</button>
+            <button type="button" data-star="5">★</button>
+          </div>
+        </div>
+        <div class="field"><label>Your Review</label><textarea id="reviewText" placeholder="Tell us what you think of the server..." maxlength="400"></textarea></div>
+        <div class="error-msg" id="reviewFormError">Please add a star rating and a short review.</div>
+        <button class="btn btn-primary" id="submitReview">Submit Review</button>
+        <p class="review-form-msg" id="reviewFormMsg">✓ Thanks — your review has been posted!</p>
+      </div>
       <p class="hint" style="margin-top:14px;">Reviews are visible to every visitor of this browser. An admin can remove any review from the Admin panel.</p>
     </div>
   </section>
@@ -810,6 +877,10 @@
   <button class="bottom-nav-link" data-tab="team">
     <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><circle cx="17.5" cy="9" r="2.3"/><path d="M15.7 14.6c2.6.2 4.8 2.2 4.8 5.4"/></svg></span>
     <span>Team</span>
+  </button>
+  <button class="bottom-nav-link" data-tab="server">
+    <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="6" rx="1"/><rect x="4" y="14" width="16" height="6" rx="1"/><circle cx="7.5" cy="7" r="0.8" fill="currentColor" stroke="none"/><circle cx="7.5" cy="17" r="0.8" fill="currentColor" stroke="none"/></svg></span>
+    <span>Server</span>
   </button>
   <button class="bottom-nav-link" data-tab="gallery">
     <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="10" r="1.7"/><path d="m4 17 5-4.5 3.5 3 3-2.5L20.5 17.5"/></svg></span>
@@ -845,6 +916,7 @@
         <h4>Explore</h4>
         <button data-tab="about">About</button>
         <button data-tab="team">BlueX Team</button>
+        <button data-tab="server">Server</button>
         <button data-tab="news">News</button>
         <button data-tab="gallery">Gallery</button>
         <button data-tab="reviews">Reviews</button>
@@ -1801,18 +1873,46 @@ document.querySelectorAll('#reviewStarPicker button').forEach(btn => {
   });
 });
 document.getElementById('submitReview').addEventListener('click', () => {
-  const name = document.getElementById('reviewName').value.trim();
+  const user = auth.currentUser;
+  if(!user){ updateReviewAuthUI(); return; }
   const text = document.getElementById('reviewText').value.trim();
   const errEl = document.getElementById('reviewFormError');
-  if(!name || !text || !selectedStars){ errEl.classList.add('show'); return; }
+  if(!text || !selectedStars){ errEl.classList.add('show'); return; }
   errEl.classList.remove('show');
-  siteData.reviews.unshift({ name, stars: selectedStars, text, date: new Date().toLocaleDateString(undefined,{month:'short', year:'numeric'}) });
+  const name = document.getElementById('reviewPostingName').textContent.trim() || user.displayName || (user.email ? user.email.split('@')[0] : 'Member');
+  siteData.reviews.unshift({ name, uid: user.uid, stars: selectedStars, text, date: new Date().toLocaleDateString(undefined,{month:'short', year:'numeric'}) });
   saveSiteMeta(); renderReviews();
   document.getElementById('reviewFormMsg').classList.add('show');
-  document.getElementById('reviewName').value=''; document.getElementById('reviewText').value='';
+  document.getElementById('reviewText').value='';
   selectedStars = 0; document.querySelectorAll('#reviewStarPicker button').forEach(b => b.classList.remove('filled'));
   setTimeout(() => document.getElementById('reviewFormMsg').classList.remove('show'), 2500);
 });
+
+// Keeps the review form's "who's posting" state in sync with the logged-in
+// account: shows a login prompt when signed out, and shows a read-only
+// posting-as display (never an editable name field) when signed in.
+function updateReviewAuthUI(){
+  const notice = document.getElementById('reviewLoginNotice');
+  const fields = document.getElementById('reviewFormFields');
+  const user = auth.currentUser;
+  if(user){
+    notice.style.display = 'none';
+    fields.style.display = '';
+    const name = (userDropdownName.textContent || user.displayName || (user.email ? user.email.split('@')[0] : 'Member')).trim();
+    document.getElementById('reviewPostingName').textContent = name || 'Member';
+    const avatarEl = document.getElementById('reviewPostingAvatar');
+    if(currentUserPhoto){
+      avatarEl.innerHTML = `<img src="${currentUserPhoto}" alt="">`;
+    } else {
+      avatarEl.textContent = initials(name || 'Member');
+    }
+  } else {
+    notice.style.display = '';
+    fields.style.display = 'none';
+    document.getElementById('reviewFormError').classList.remove('show');
+  }
+}
+document.getElementById('reviewLoginBtn').addEventListener('click', () => openAuthOverlay('login'));
 
 /* ===================== JOIN TEAM APPLICATION ===================== */
 document.getElementById('submitJoinApplication').addEventListener('click', async () => {
@@ -2158,6 +2258,7 @@ function subscribeUserProfile(uid){
     userDropdownName.textContent = name;
     userDropdownEmail.textContent = user.email || '';
     renderUserAvatar(profile.photo || '', name);
+    updateReviewAuthUI();
   });
 }
 
@@ -2178,6 +2279,7 @@ onAuthStateChanged(auth, user => {
     userDropdownEmail.textContent = '';
     renderUserAvatar('', '');
   }
+  updateReviewAuthUI();
 });
 
 /* ---- Edit Profile overlay ---- */
