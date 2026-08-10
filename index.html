@@ -231,6 +231,23 @@
   .avatar-edit-preview img{ width:100%; height:100%; object-fit:cover; display:block; }
   .avatar-edit-actions{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
 
+  /* ---------------- IMAGE CROP MODAL ---------------- */
+  .crop-box{ max-width:340px; }
+  .crop-stage{ position:relative; width:240px; height:240px; max-width:100%; margin:4px auto 16px; border-radius:14px;
+    overflow:hidden; background:#000; border:1px solid var(--blue-deep); touch-action:none; cursor:grab; }
+  .crop-stage:active{ cursor:grabbing; }
+  .crop-image{ position:absolute; top:0; left:0; max-width:none; max-height:none; transform-origin:0 0;
+    user-select:none; -webkit-user-drag:none; pointer-events:none; }
+  .crop-mask{ position:absolute; inset:0; pointer-events:none; }
+  .crop-mask.circle{ border-radius:50%; box-shadow: 0 0 0 2000px rgba(6,12,24,0.55); border:2px solid rgba(255,255,255,0.75); }
+  .crop-zoom-row{ display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+  .crop-zoom-row input[type=range]{ flex:1; accent-color: var(--blue); }
+  .crop-zoom-icon{ font-family:'JetBrains Mono'; font-size:16px; color: var(--text-dim); flex:none; width:14px; text-align:center; }
+  .crop-preview-row{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .crop-preview{ width:52px; height:52px; border-radius:50%; overflow:hidden; border:1px solid var(--blue-deep);
+    background: linear-gradient(135deg, rgba(53,217,255,0.14), rgba(47,91,215,0.10)); flex:none; }
+  .crop-preview canvas{ width:100%; height:100%; display:block; }
+
 
   /* ---------------- DISCORD ---------------- */
   .discord-panel{ background: linear-gradient(135deg, rgba(30,99,201,0.12), rgba(53,217,255,0.05)); border:1px solid var(--blue-deep);
@@ -375,27 +392,31 @@
 
   /* ---------------- USER AUTH (NAV) ---------------- */
   .user-menu{ position:relative; flex:none; }
-  .user-auth-btn{ display:inline-flex; align-items:center; gap:7px; background: linear-gradient(135deg, rgba(53,217,255,0.14), rgba(47,91,215,0.10));
-    border:1px solid var(--blue-deep); color: var(--blue-soft); font-family:'JetBrains Mono'; font-size:12px; font-weight:700; letter-spacing:.5px;
-    padding:9px 14px; cursor:pointer; white-space:nowrap; transition: transform .2s ease, border-color .2s ease, color .2s ease; max-width:150px; }
-  .user-auth-btn:hover{ border-color: var(--blue); color:#fff; transform: translateY(-1px); }
-  .user-auth-icon{ font-size:14px; flex:none; }
-  .user-auth-icon img{ width:18px; height:18px; border-radius:50%; object-fit:cover; display:block; }
-  .user-auth-label{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .user-auth-btn{ display:flex; align-items:center; justify-content:center; width:56px; height:56px; border-radius:50%; flex:none;
+    background: linear-gradient(135deg, rgba(53,217,255,0.14), rgba(47,91,215,0.10));
+    border:1px solid var(--blue-deep); color: var(--blue-soft); padding:0; overflow:hidden; cursor:pointer;
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease, color .2s ease; }
+  .user-auth-btn:hover{ border-color: var(--blue); color:#fff; transform: scale(1.06);
+    box-shadow: 0 0 0 3px rgba(53,217,255,0.28), 0 10px 22px -10px rgba(53,217,255,0.6); }
+  .user-auth-btn:active{ transform: scale(.93); }
+  .user-auth-icon{ width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:22px; flex:none; }
+  .user-auth-icon img{ width:100%; height:100%; border-radius:50%; object-fit:cover; display:block; }
+  .user-auth-label{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden;
+    clip:rect(0,0,0,0); white-space:nowrap; border:0; }
   .user-dropdown{ position:absolute; top:calc(100% + 10px); right:0; background: linear-gradient(180deg, var(--bg-panel), var(--bg-panel-2));
     border:1px solid var(--blue-deep); padding:14px; min-width:210px; box-shadow: 0 16px 34px -14px rgba(0,0,0,0.65);
     opacity:0; pointer-events:none; transform: translateY(-8px); transition: opacity .2s ease, transform .2s ease; z-index:110; }
   .user-dropdown.open{ opacity:1; pointer-events:auto; transform:translateY(0); }
   .user-dropdown-top{ display:flex; align-items:center; gap:10px; margin-bottom:12px; }
-  .user-dropdown-avatar{ width:42px; height:42px; border-radius:50%; flex:none; overflow:hidden; display:flex; align-items:center; justify-content:center;
+  .user-dropdown-avatar{ width:48px; height:48px; border-radius:50%; flex:none; overflow:hidden; display:flex; align-items:center; justify-content:center;
     background: linear-gradient(135deg, rgba(53,217,255,0.18), rgba(47,91,215,0.14)); border:1px solid var(--blue-deep);
-    font-family:'JetBrains Mono'; font-size:13px; font-weight:700; color: var(--blue-soft); }
+    font-family:'JetBrains Mono'; font-size:14px; font-weight:700; color: var(--blue-soft); }
   .user-dropdown-avatar img{ width:100%; height:100%; object-fit:cover; display:block; }
   .user-dropdown-info{ min-width:0; }
   .user-dropdown-name{ font-size:13.5px; font-weight:700; margin-bottom:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .user-dropdown-email{ font-family:'JetBrains Mono'; font-size:11px; color: var(--text-dim); word-break:break-all; }
   .user-dropdown-actions{ display:flex; flex-direction:column; gap:8px; }
-  @media (max-width:940px){ .user-auth-label{ display:none; } .user-auth-btn{ padding:9px 11px; } }
+  @media (max-width:940px){ .user-auth-btn{ width:44px; height:44px; } .user-auth-icon{ font-size:18px; } }
 
   /* ---------------- USER AUTH (MODAL) ---------------- */
   .auth-tabs{ display:flex; gap:6px; margin-bottom:20px; background: var(--bg); border:1px solid var(--line); padding:4px; }
@@ -946,6 +967,36 @@
   </div>
 </div>
 
+<!-- IMAGE CROP -->
+<div class="admin-overlay" id="cropOverlay">
+  <div class="admin-box crop-box" id="cropBox">
+    <div class="admin-box-icon">✂️</div>
+    <h3 class="mono" style="font-family:'Press Start 2P'; font-size:12.5px; margin-bottom:6px;">CROP PHOTO</h3>
+    <p class="hint" style="text-align:center; margin-top:0;">Drag to reposition &middot; use the slider to zoom</p>
+
+    <div class="crop-stage" id="cropStage">
+      <img class="crop-image" id="cropImage" alt="" draggable="false">
+      <div class="crop-mask circle"></div>
+    </div>
+
+    <div class="crop-zoom-row">
+      <span class="crop-zoom-icon">−</span>
+      <input type="range" id="cropZoom" min="100" max="300" value="100" step="1" aria-label="Zoom">
+      <span class="crop-zoom-icon">+</span>
+    </div>
+
+    <div class="crop-preview-row">
+      <span class="hint" style="margin:0;">Preview</span>
+      <div class="crop-preview"><canvas id="cropPreviewCanvas" width="52" height="52"></canvas></div>
+    </div>
+
+    <div class="error-msg" id="cropError"></div>
+
+    <button class="btn btn-primary" id="cropSave" style="width:100%; justify-content:center; margin-top:6px;">✅ Crop &amp; Save</button>
+    <button class="btn btn-ghost" id="cropCancel" style="width:100%; justify-content:center; margin-top:10px;">❌ Cancel</button>
+  </div>
+</div>
+
 <!-- ADMIN LOGIN -->
 <div class="admin-overlay" id="adminLoginOverlay">
   <div class="admin-box">
@@ -1337,7 +1388,136 @@ function compressImageFile(file, maxDim = 1280, quality = 0.75){
   });
 }
 
-/* ===================== TAB NAVIGATION ===================== */
+/* ===================== IMAGE CROPPER (drag + zoom, 1:1 square output) ===================== */
+// Reusable modal: openCropper(file) returns a Promise that resolves with a
+// cropped JPEG data URL, or null if the user cancels. Used by both the
+// sign-up photo picker and the Edit Profile photo picker so a raw file is
+// never uploaded straight from disk.
+const cropOverlay = document.getElementById('cropOverlay');
+const cropStage = document.getElementById('cropStage');
+const cropImage = document.getElementById('cropImage');
+const cropZoom = document.getElementById('cropZoom');
+const cropPreviewCanvas = document.getElementById('cropPreviewCanvas');
+const cropSaveBtn = document.getElementById('cropSave');
+const cropCancelBtn = document.getElementById('cropCancel');
+const cropErrorEl = document.getElementById('cropError');
+
+const CROP_STAGE_SIZE = 240;   // on-screen square viewport, in CSS px
+const CROP_OUTPUT_SIZE = 320;  // exported square image, in px
+
+let cropState = null;  // { natW, natH, minScale, scale, x, y }
+let cropResolve = null;
+
+function clampCropOffsets(){
+  const { natW, natH, scale } = cropState;
+  const dispW = natW * scale, dispH = natH * scale;
+  const minX = CROP_STAGE_SIZE - dispW, minY = CROP_STAGE_SIZE - dispH;
+  cropState.x = Math.min(0, Math.max(minX, cropState.x));
+  cropState.y = Math.min(0, Math.max(minY, cropState.y));
+}
+
+function renderCropPreview(){
+  const ctx = cropPreviewCanvas.getContext('2d');
+  const { scale, x, y } = cropState;
+  const sSize = CROP_STAGE_SIZE / scale;
+  ctx.clearRect(0, 0, cropPreviewCanvas.width, cropPreviewCanvas.height);
+  ctx.drawImage(cropImage, -x / scale, -y / scale, sSize, sSize, 0, 0, cropPreviewCanvas.width, cropPreviewCanvas.height);
+}
+
+function renderCrop(){
+  const { natW, natH, scale, x, y } = cropState;
+  cropImage.style.width = (natW * scale) + 'px';
+  cropImage.style.height = (natH * scale) + 'px';
+  cropImage.style.transform = `translate(${x}px, ${y}px)`;
+  renderCropPreview();
+}
+
+function openCropper(file){
+  return new Promise(resolve => {
+    if(!file || !file.type || !file.type.startsWith('image/')){
+      resolve(null);
+      return;
+    }
+    cropErrorEl.textContent = '';
+    cropResolve = resolve;
+    const reader = new FileReader();
+    reader.onerror = () => closeCropper(null);
+    reader.onload = ev => {
+      cropImage.onload = () => {
+        const natW = cropImage.naturalWidth, natH = cropImage.naturalHeight;
+        const minScale = Math.max(CROP_STAGE_SIZE / natW, CROP_STAGE_SIZE / natH);
+        cropState = {
+          natW, natH, minScale, scale: minScale,
+          x: (CROP_STAGE_SIZE - natW * minScale) / 2,
+          y: (CROP_STAGE_SIZE - natH * minScale) / 2
+        };
+        cropZoom.value = 100;
+        renderCrop();
+        cropOverlay.classList.add('open');
+      };
+      cropImage.onerror = () => closeCropper(null);
+      cropImage.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function closeCropper(result){
+  cropOverlay.classList.remove('open');
+  const resolve = cropResolve;
+  cropResolve = null;
+  cropState = null;
+  if(resolve) resolve(result);
+}
+
+cropCancelBtn.addEventListener('click', () => closeCropper(null));
+cropOverlay.addEventListener('click', e => { if(e.target === cropOverlay) closeCropper(null); });
+
+cropZoom.addEventListener('input', () => {
+  if(!cropState) return;
+  const newScale = cropState.minScale * (cropZoom.value / 100);
+  const center = CROP_STAGE_SIZE / 2;
+  // Keep the point currently under the viewport center fixed while zooming.
+  const nx = (center - cropState.x) / cropState.scale;
+  const ny = (center - cropState.y) / cropState.scale;
+  cropState.scale = newScale;
+  cropState.x = center - nx * newScale;
+  cropState.y = center - ny * newScale;
+  clampCropOffsets();
+  renderCrop();
+});
+
+let cropDrag = null;
+cropStage.addEventListener('pointerdown', e => {
+  if(!cropState) return;
+  cropDrag = { startX: e.clientX, startY: e.clientY, origX: cropState.x, origY: cropState.y };
+  cropStage.setPointerCapture(e.pointerId);
+});
+cropStage.addEventListener('pointermove', e => {
+  if(!cropDrag || !cropState) return;
+  cropState.x = cropDrag.origX + (e.clientX - cropDrag.startX);
+  cropState.y = cropDrag.origY + (e.clientY - cropDrag.startY);
+  clampCropOffsets();
+  renderCrop();
+});
+['pointerup', 'pointercancel'].forEach(evt => cropStage.addEventListener(evt, () => { cropDrag = null; }));
+
+cropSaveBtn.addEventListener('click', () => {
+  if(!cropState) return;
+  try{
+    const canvas = document.createElement('canvas');
+    canvas.width = CROP_OUTPUT_SIZE; canvas.height = CROP_OUTPUT_SIZE;
+    const { scale, x, y } = cropState;
+    const sSize = CROP_STAGE_SIZE / scale;
+    canvas.getContext('2d').drawImage(cropImage, -x / scale, -y / scale, sSize, sSize, 0, 0, CROP_OUTPUT_SIZE, CROP_OUTPUT_SIZE);
+    closeCropper(canvas.toDataURL('image/jpeg', 0.85));
+  }catch(err){
+    cropErrorEl.textContent = 'Could not crop that image. Try another photo.';
+    cropErrorEl.classList.add('show');
+  }
+});
+
+
 const tabLinks = document.querySelectorAll('[data-tab]');
 const tabPanels = document.querySelectorAll('.tab-panel');
 function showTab(name){
@@ -1799,14 +1979,13 @@ function resetSignupAvatar(){
 }
 signupAvatarFile.addEventListener('change', async () => {
   const file = signupAvatarFile.files[0];
+  signupAvatarFile.value = ''; // allow re-choosing the same file later
   if(!file) return;
-  try{
-    signupAvatarData = await compressImageFile(file, 300, 0.8);
-    signupAvatarPreview.innerHTML = `<img src="${signupAvatarData}" alt="">`;
-    signupAvatarRemove.style.display = '';
-  }catch(err){
-    setMsg('signupError', err.message || 'Could not read that image.');
-  }
+  const cropped = await openCropper(file);
+  if(!cropped) return; // user cancelled the crop
+  signupAvatarData = cropped;
+  signupAvatarPreview.innerHTML = `<img src="${signupAvatarData}" alt="">`;
+  signupAvatarRemove.style.display = '';
 });
 signupAvatarRemove.addEventListener('click', resetSignupAvatar);
 
@@ -2017,14 +2196,11 @@ profileOverlay.addEventListener('click', e => { if(e.target === profileOverlay) 
 
 profileAvatarFile.addEventListener('change', async () => {
   const file = profileAvatarFile.files[0];
-  if(!file) return;
-  try{
-    const data = await compressImageFile(file, 300, 0.8);
-    setProfilePreview(data, profileName.value);
-  }catch(err){
-    setMsg('profileError', err.message || 'Could not read that image.');
-  }
   profileAvatarFile.value = '';
+  if(!file) return;
+  const cropped = await openCropper(file);
+  if(!cropped) return; // user cancelled the crop
+  setProfilePreview(cropped, profileName.value);
 });
 profileAvatarRemove.addEventListener('click', () => setProfilePreview('', profileName.value));
 
