@@ -201,6 +201,8 @@
   .goal-list li::before{ content:"◆"; color: var(--blue); flex:none; }
 
   /* ---------------- TEAM ---------------- */
+  .subsection-title{ font-family:'JetBrains Mono'; font-size:12px; letter-spacing:1.5px; text-transform:uppercase; color: var(--blue-soft); margin-bottom:16px; display:flex; align-items:center; gap:10px; }
+  .subsection-title::before{ content:""; width:16px; height:2px; background: var(--blue); }
   .team-grid{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:20px; justify-content:center; }
   .member-card{ background: var(--bg-panel); border:1px solid var(--line); padding:30px 22px; text-align:center;
     display:flex; flex-direction:column; align-items:center; transition: border-color .25s ease, transform .25s ease, box-shadow .25s ease; }
@@ -647,14 +649,23 @@
       <h2>The people<br>running BLUE-ZONE</h2>
       <p id="teamSubtitle">Seven players who keep the server, the events and the Discord running — say hi in #announcements.</p>
     </div>
+    <h3 class="subsection-title">Team Members</h3>
     <div class="team-grid" id="teamGrid"></div>
 
-    <div class="review-form reveal" id="joinTeamForm" style="margin-top:34px;">
+    <h3 class="subsection-title" style="margin-top:44px;">Team Application</h3>
+    <div class="review-form reveal" id="joinTeamForm">
       <h3>JOIN OUR TEAM</h3>
       <p class="gallery-hint" style="margin-bottom:18px;">Think you'd be a good fit for BlueX Team? Send us your application below.</p>
       <div class="field"><label>Your Name / IGN</label><input type="text" id="joinName" placeholder="e.g. Notch_Fan22" maxlength="40"></div>
       <div class="field"><label>Discord Handle</label><input type="text" id="joinDiscord" placeholder="e.g. @yourname" maxlength="40"></div>
       <div class="field"><label>Role You're Interested In</label><input type="text" id="joinRole" placeholder="e.g. Moderator, Builder, PvP Warrior" maxlength="40"></div>
+      <div class="field">
+        <label>Border Color</label>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <input type="color" id="joinBorderColor" value="#4da3ff" style="width:48px; height:36px; padding:2px; cursor:pointer; background:none; border:1px solid var(--line);">
+          <span class="hint" style="margin:0;">Pick the outline color you'd like on your team card if approved.</span>
+        </div>
+      </div>
       <div class="field"><label>Experience</label><textarea id="joinExperience" placeholder="Past servers, roles, or skills you'd bring." maxlength="500"></textarea></div>
       <div class="field"><label>Why do you want to join? (optional)</label><textarea id="joinMessage" placeholder="Tell us a bit about yourself." maxlength="500"></textarea></div>
       <div class="error-msg" id="joinFormError">Please add your name, Discord handle, and the role you're interested in.</div>
@@ -1804,6 +1815,7 @@ document.getElementById('submitJoinApplication').addEventListener('click', async
   const name = document.getElementById('joinName').value.trim();
   const discord = document.getElementById('joinDiscord').value.trim();
   const role = document.getElementById('joinRole').value.trim();
+  const borderColor = document.getElementById('joinBorderColor').value;
   const experience = document.getElementById('joinExperience').value.trim();
   const message = document.getElementById('joinMessage').value.trim();
   const errEl = document.getElementById('joinFormError');
@@ -1815,7 +1827,7 @@ document.getElementById('submitJoinApplication').addEventListener('click', async
   btn.textContent = 'Submitting…';
   const application = {
     id: newApplicationId(),
-    name, discord, role, experience, message,
+    name, discord, role, borderColor, experience, message,
     status: 'pending',
     date: new Date().toLocaleDateString(undefined,{month:'short', day:'numeric', year:'numeric'})
   };
@@ -1836,8 +1848,8 @@ document.getElementById('submitJoinApplication').addEventListener('click', async
   updatePendingAppBadge();
   document.getElementById('joinFormMsg').classList.add('show');
   document.getElementById('joinName').value=''; document.getElementById('joinDiscord').value='';
-  document.getElementById('joinRole').value=''; document.getElementById('joinExperience').value='';
-  document.getElementById('joinMessage').value='';
+  document.getElementById('joinRole').value=''; document.getElementById('joinBorderColor').value='#4da3ff';
+  document.getElementById('joinExperience').value=''; document.getElementById('joinMessage').value='';
   setTimeout(() => document.getElementById('joinFormMsg').classList.remove('show'), 3000);
 });
 
@@ -2632,6 +2644,7 @@ function renderApplicationsEdit(){
           <div class="app-detail"><label>Discord</label><p>${escapeHtml(a.discord)}</p></div>
         </div>
         <div class="app-detail"><label>Role Requested</label><p>${escapeHtml(a.role)}</p></div>
+        ${a.borderColor ? `<div class="app-detail"><label>Border Color</label><p style="display:flex; align-items:center; gap:8px;"><span style="display:inline-block; width:16px; height:16px; border-radius:3px; background:${escapeHtml(a.borderColor)}; border:1px solid var(--line);"></span>${escapeHtml(a.borderColor)}</p></div>` : ''}
         ${a.experience ? `<div class="app-detail"><label>Experience</label><p>${escapeHtml(a.experience)}</p></div>` : ''}
         ${a.message ? `<div class="app-detail"><label>Why They Want to Join</label><p>${escapeHtml(a.message)}</p></div>` : ''}
         <div class="app-detail"><label>Submitted</label><p>${escapeHtml(a.date)}</p></div>
@@ -2661,7 +2674,7 @@ async function approveApplication(i){
     role: a.role,
     bio: a.experience || 'New addition to the BlueX Team.',
     handle: a.discord,
-    outline: guessOutlineForRole(a.role),
+    outline: a.borderColor || guessOutlineForRole(a.role),
     avatar: ''
   });
   renderApplicationsEdit();
