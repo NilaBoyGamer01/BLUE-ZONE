@@ -770,6 +770,26 @@ const DEFAULT_DATA = {
 
 let siteData = JSON.parse(JSON.stringify(DEFAULT_DATA));
 
+// Fills in any fields missing from loaded/saved data with the matching
+// DEFAULT_DATA value, so a partial save, an interrupted write, or older data
+// in Firebase can never leave siteData.hero / .stats / .about / etc. undefined
+// and silently crash a render function later (e.g. openAdminPanel()).
+function withDefaults(data){
+  const merged = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  const src = data || {};
+  for(const key of Object.keys(merged)){
+    if(src[key] === undefined || src[key] === null) continue;
+    if(Array.isArray(merged[key])){
+      merged[key] = Array.isArray(src[key]) ? src[key] : merged[key];
+    } else if(typeof merged[key] === 'object'){
+      merged[key] = { ...merged[key], ...src[key] };
+    } else {
+      merged[key] = src[key];
+    }
+  }
+  return merged;
+}
+
 // Role outline colors, editable per team member in the admin panel.
 const ROLE_OUTLINE_COLORS = {
   gold:   { hex:"#ffcf4d", rgb:"255,207,77",  label:"Gold — Leader" },
@@ -916,7 +936,7 @@ async function saveApplicationsData(){
 onValue(siteMetaRef, (snapshot) => {
   if(!snapshot.exists()) return;
   const meta = snapshot.val();
-  siteData = { ...siteData, ...meta };
+  siteData = withDefaults({ ...siteData, ...meta, gallery: siteData.gallery, applications: siteData.applications });
   renderAll();
 });
 onValue(galleryRef, (snapshot) => {
@@ -1994,16 +2014,27 @@ document.querySelectorAll('.admin-tab').forEach(tab => {
 });
 
 function openAdminPanel(){
-  document.getElementById('editHeroTitle').value = siteData.hero.title;
-  document.getElementById('editHeroLead').value = siteData.hero.lead;
-  document.getElementById('editStatMembers').value = siteData.stats.members;
-  document.getElementById('editStatOnline').value = siteData.stats.online;
-  document.getElementById('editStatSince').value = siteData.stats.since;
-  document.getElementById('editAbout1').value = siteData.about.story1;
-  document.getElementById('editAbout2').value = siteData.about.story2;
-  document.getElementById('editGoals').value = siteData.about.goals.join('\n');
-  document.getElementById('editTeamSubtitle').value = siteData.teamSubtitle;
-  renderTeamEdit(); renderGalleryEdit(); renderNewsEdit(); renderReviewsEdit(); renderApplicationsEdit(); renderLogsList();
+  // Belt-and-braces: guarantee every field this function touches exists,
+  // no matter what shape siteData currently has, so a missing/partial field
+  // can never throw here and silently leave the panel closed.
+  siteData = withDefaults(siteData);
+  try{
+    document.getElementById('editHeroTitle').value = siteData.hero.title;
+    document.getElementById('editHeroLead').value = siteData.hero.lead;
+    document.getElementById('editStatMembers').value = siteData.stats.members;
+    document.getElementById('editStatOnline').value = siteData.stats.online;
+    document.getElementById('editStatSince').value = siteData.stats.since;
+    document.getElementById('editAbout1').value = siteData.about.story1;
+    document.getElementById('editAbout2').value = siteData.about.story2;
+    document.getElementById('editGoals').value = siteData.about.goals.join('\n');
+    document.getElementById('editTeamSubtitle').value = siteData.teamSubtitle;
+    renderTeamEdit(); renderGalleryEdit(); renderNewsEdit(); renderReviewsEdit(); renderApplicationsEdit(); renderLogsList();
+  }catch(err){
+    // Never let a rendering bug leave the panel silently closed — surface it
+    // and still open the panel so at least some tabs are usable/fixable.
+    console.error('openAdminPanel render error:', err);
+    fireAlert('Admin panel had a rendering error — some fields may be blank: ' + (err && err.message ? err.message : err));
+  }
   adminPanelOverlay.classList.add('open');
 }
 
@@ -2374,7 +2405,7 @@ setTimeout(hidePageLoader, PAGE_LOADER_MAX_MS);
   // Load and render the fast, small text content first.
   const meta = await loadSiteMeta();
   setLoaderProgress(70, 'Rendering…');
-  siteData = { ...meta, gallery: [], applications: [] };
+  siteData = withDefaults({ ...meta, gallery: [], applications: [] });
   renderAll();
   revealVisible();
   hidePageLoader();
