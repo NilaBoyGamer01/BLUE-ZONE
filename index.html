@@ -2768,7 +2768,19 @@ setTimeout(hidePageLoader, PAGE_LOADER_MAX_MS);
   // Load and render the fast, small text content first.
   const meta = await loadSiteMeta();
   setLoaderProgress(70, 'Rendering…');
-  siteData = { ...meta, gallery: [], applications: [] };
+  // Firebase RTDB silently drops keys whose value is an empty array, so if an
+  // admin deletes every team member / news item / review, that key can be
+  // missing from `meta` entirely rather than coming back as []. Fall back to
+  // an empty array (not the demo DEFAULT_DATA content) so downstream code
+  // that calls .length on these never sees `undefined`.
+  siteData = {
+    ...meta,
+    team: meta.team || [],
+    news: meta.news || [],
+    reviews: meta.reviews || [],
+    gallery: [],
+    applications: []
+  };
   renderAll();
   revealVisible();
   hidePageLoader();
