@@ -391,6 +391,12 @@
   .error-msg{ color: var(--danger); font-size:13px; margin-top:10px; display:none; }
   .error-msg.show{ display:block; }
   .hint{ font-size:12px; color: var(--text-dim); margin-top:-8px; margin-bottom:16px; }
+  .checkbox-group{ display:flex; flex-direction:column; gap:8px; }
+  .checkbox-option{ display:flex; align-items:center; gap:10px; font-size:13.5px; cursor:pointer; padding:10px 12px;
+    border:1px solid var(--line); background: var(--bg-panel-2); transition: border-color .2s ease, background .2s ease; }
+  .checkbox-option:hover{ border-color: var(--blue-deep); }
+  .checkbox-option input[type=checkbox]{ width:16px; height:16px; accent-color: var(--blue-deep); cursor:pointer; flex:none; }
+  .checkbox-option.checked{ border-color: var(--blue-deep); background: rgba(53,217,255,0.08); }
 
   /* ---------------- CONTACT / CTA ---------------- */
   .cta-band{ background: linear-gradient(135deg, rgba(53,217,255,0.09), rgba(47,91,215,0.09)); border:1px solid var(--blue-deep); padding:48px; text-align:center; }
@@ -685,9 +691,16 @@
           <span class="hint" style="margin:0;">Pick the outline color you'd like on your team card if approved.</span>
         </div>
       </div>
-      <div class="field"><label>Experience</label><textarea id="joinExperience" placeholder="Past servers, roles, or skills you'd bring." maxlength="500"></textarea></div>
+      <div class="field">
+        <label>Team Name</label>
+        <div class="checkbox-group" id="joinTeamNameGroup">
+          <label class="checkbox-option"><input type="checkbox" name="joinTeamName" value="BlueX Team"> BlueX Team</label>
+          <label class="checkbox-option"><input type="checkbox" name="joinTeamName" value="BlueX Syndicate"> BlueX Syndicate</label>
+        </div>
+        <span class="hint" style="margin:6px 0 0;">Select which team(s) you're applying to — this becomes your bio on the Team Card if approved.</span>
+      </div>
       <div class="field"><label>Why do you want to join? (optional)</label><textarea id="joinMessage" placeholder="Tell us a bit about yourself." maxlength="500"></textarea></div>
-      <div class="error-msg" id="joinFormError">Please add your name, Discord handle, and the role you're interested in.</div>
+      <div class="error-msg" id="joinFormError">Please add your name, Discord handle, the role you're interested in, and at least one team name.</div>
       <button class="btn btn-primary" id="submitJoinApplication">Submit Application</button>
       <p class="review-form-msg" id="joinFormMsg">✓ Thanks — your application is in! Check its status below anytime.</p>
       <p class="hint" style="margin-top:14px;">Applications are reviewed by the BlueX Team. Approved applicants are added straight to the team list.</p>
@@ -1851,18 +1864,18 @@ document.getElementById('submitJoinApplication').addEventListener('click', async
   const discord = document.getElementById('joinDiscord').value.trim();
   const role = document.getElementById('joinRole').value.trim();
   const borderColor = document.getElementById('joinBorderColor').value;
-  const experience = document.getElementById('joinExperience').value.trim();
+  const teamNames = Array.from(document.querySelectorAll('input[name="joinTeamName"]:checked')).map(cb => cb.value);
   const message = document.getElementById('joinMessage').value.trim();
   const errEl = document.getElementById('joinFormError');
   const btn = document.getElementById('submitJoinApplication');
-  if(!name || !discord || !role){ errEl.classList.add('show'); return; }
+  if(!name || !discord || !role || !teamNames.length){ errEl.classList.add('show'); return; }
   errEl.classList.remove('show');
   btn.disabled = true;
   const originalLabel = btn.textContent;
   btn.textContent = 'Submitting…';
   const application = {
     id: newApplicationId(),
-    name, discord, role, borderColor, experience, message,
+    name, discord, role, borderColor, teamNames, message,
     uid: loggedIn ? auth.currentUser.uid : null,
     status: 'pending',
     date: new Date().toLocaleDateString(undefined,{month:'short', day:'numeric', year:'numeric'})
@@ -1885,8 +1898,18 @@ document.getElementById('submitJoinApplication').addEventListener('click', async
   document.getElementById('joinFormMsg').classList.add('show');
   document.getElementById('joinName').value=''; document.getElementById('joinDiscord').value='';
   document.getElementById('joinRole').value=''; document.getElementById('joinBorderColor').value='#4da3ff';
-  document.getElementById('joinExperience').value=''; document.getElementById('joinMessage').value='';
+  document.querySelectorAll('input[name="joinTeamName"]').forEach(cb => {
+    cb.checked = false;
+    cb.closest('.checkbox-option').classList.remove('checked');
+  });
+  document.getElementById('joinMessage').value='';
   setTimeout(() => document.getElementById('joinFormMsg').classList.remove('show'), 3000);
+});
+// Highlight a checkbox's option row while it's checked, purely visual.
+document.querySelectorAll('input[name="joinTeamName"]').forEach(cb => {
+  cb.addEventListener('change', () => {
+    cb.closest('.checkbox-option').classList.toggle('checked', cb.checked);
+  });
 });
 
 /* ===================== ADMIN SECURITY: CONFIG ===================== */
@@ -2834,7 +2857,7 @@ function renderApplicationsEdit(){
         <div class="app-detail"><label>Role Requested</label><p>${escapeHtml(a.role)}</p></div>
         ${a.uid ? `<div class="app-detail"><label>Profile</label><p>✓ Signed-in member — their current profile picture &amp; name will be used automatically on approval.</p></div>` : ''}
         ${a.borderColor ? `<div class="app-detail"><label>Border Color</label><p style="display:flex; align-items:center; gap:8px;"><span style="display:inline-block; width:16px; height:16px; border-radius:3px; background:${escapeHtml(a.borderColor)}; border:1px solid var(--line);"></span>${escapeHtml(a.borderColor)}</p></div>` : ''}
-        ${a.experience ? `<div class="app-detail"><label>Experience</label><p>${escapeHtml(a.experience)}</p></div>` : ''}
+        ${a.teamNames && a.teamNames.length ? `<div class="app-detail"><label>Team Name</label><p>${escapeHtml(a.teamNames.join(' & '))}</p></div>` : ''}
         ${a.message ? `<div class="app-detail"><label>Why They Want to Join</label><p>${escapeHtml(a.message)}</p></div>` : ''}
         <div class="app-detail"><label>Submitted</label><p>${escapeHtml(a.date)}</p></div>
         <div class="app-status-row">
@@ -2861,20 +2884,23 @@ async function approveApplication(i){
   a.status = 'approved';
   // If the applicant applied while logged in, pull their current profile
   // photo + display name straight from their account — no re-upload needed.
-  let teamName = a.name;
+  let memberName = a.name;
   let teamAvatar = '';
   if(a.uid){
     try{
       const snap = await get(ref(db, 'users/' + a.uid));
       const profile = snap.exists() ? snap.val() : {};
-      teamName = profile.displayName || a.name;
+      memberName = profile.displayName || a.name;
       teamAvatar = profile.photo || '';
     }catch(e){ console.error('Could not load applicant profile for auto-avatar:', e); }
   }
+  // The team(s) they applied under becomes their Team Card bio, e.g.
+  // "BlueX Team" or "BlueX Team & BlueX Syndicate".
+  const bio = (a.teamNames && a.teamNames.length) ? a.teamNames.join(' & ') : 'New addition to the BlueX Team.';
   siteData.team.push({
-    name: teamName,
+    name: memberName,
     role: a.role,
-    bio: a.experience || 'New addition to the BlueX Team.',
+    bio,
     handle: a.discord,
     outline: a.borderColor || guessOutlineForRole(a.role),
     avatar: teamAvatar
