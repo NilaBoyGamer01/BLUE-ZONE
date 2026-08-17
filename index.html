@@ -332,6 +332,10 @@
   .review-card{ background: var(--bg-panel); border:1px solid var(--line); padding:22px; transition: border-color .25s ease, transform .25s ease; }
   .review-card:hover{ border-color: var(--blue-deep); transform: translateY(-3px); }
   .review-card-top{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+  .review-card-id{ display:flex; align-items:center; gap:10px; min-width:0; }
+  .review-avatar{ width:36px; height:36px; border-radius:50%; flex:none; overflow:hidden; display:flex; align-items:center;
+    justify-content:center; background: var(--bg-panel-2); font-family:'JetBrains Mono'; font-size:11px; color: var(--blue-soft); }
+  .review-avatar img{ width:100%; height:100%; object-fit:cover; display:block; }
   .review-name{ font-weight:700; font-size:14.5px; }
   .review-date{ font-family:'JetBrains Mono'; font-size:11px; color: var(--text-dim); margin-top:2px; }
   .review-text{ font-size:13.5px; color: var(--text-dim); }
@@ -345,6 +349,12 @@
   .star-picker button.filled{ color: var(--gold); }
   .review-form-msg{ font-family:'JetBrains Mono'; font-size:12px; color: var(--emerald); margin-top:12px; display:none; }
   .review-form-msg.show{ display:block; }
+  .posting-as{ display:flex; align-items:center; gap:12px; background: var(--bg-panel-2); border:1px solid var(--line);
+    padding:12px 14px; margin-bottom:18px; }
+  .posting-as-avatar{ width:40px; height:40px; border-radius:50%; flex:none; overflow:hidden; display:flex; align-items:center;
+    justify-content:center; background: var(--bg-panel); font-family:'JetBrains Mono'; font-size:12px; color: var(--blue-soft); }
+  .posting-as-avatar img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .posting-as-name{ font-weight:700; font-size:13.5px; }
 
   /* ---------------- APPLICATIONS / STATUS PILLS ---------------- */
   .status-pill{ display:inline-flex; align-items:center; gap:7px; font-family:'JetBrains Mono'; font-size:10.5px; text-transform:uppercase;
@@ -660,7 +670,12 @@
     <div class="review-form reveal" id="joinTeamForm">
       <h3>JOIN OUR TEAM</h3>
       <p class="gallery-hint" style="margin-bottom:18px;">Think you'd be a good fit for BlueX Team? Send us your application below.</p>
-      <div class="field"><label>Your Name / IGN</label><input type="text" id="joinName" placeholder="e.g. Notch_Fan22" maxlength="40"></div>
+      <div class="posting-as" id="joinPostingAs" style="display:none;">
+        <div class="posting-as-avatar" id="joinPostingAsAvatar"></div>
+        <div><span class="hint" style="margin:0;">Applying as</span><div class="posting-as-name" id="joinPostingAsName"></div></div>
+      </div>
+      <p class="hint" id="joinPostingAsHint" style="display:none; margin:-10px 0 18px;">Your profile picture and name will be used automatically on your Team Card if approved — no need to upload it again.</p>
+      <div class="field" id="joinNameField"><label>Your Name / IGN</label><input type="text" id="joinName" placeholder="e.g. Notch_Fan22" maxlength="40"></div>
       <div class="field"><label>Discord Handle</label><input type="text" id="joinDiscord" placeholder="e.g. @yourname" maxlength="40"></div>
       <div class="field"><label>Role You're Interested In</label><input type="text" id="joinRole" placeholder="e.g. Moderator, Builder, PvP Warrior" maxlength="40"></div>
       <div class="field">
@@ -772,7 +787,11 @@
     <div class="reviews-grid reveal" id="reviewsGrid"></div>
     <div class="review-form reveal" id="reviewForm">
       <h3>WRITE A REVIEW</h3>
-      <div class="field"><label>Your Name</label><input type="text" id="reviewName" placeholder="e.g. Notch_Fan22" maxlength="40"></div>
+      <div class="posting-as" id="reviewPostingAs" style="display:none;">
+        <div class="posting-as-avatar" id="reviewPostingAsAvatar"></div>
+        <div><span class="hint" style="margin:0;">Posting as</span><div class="posting-as-name" id="reviewPostingAsName"></div></div>
+      </div>
+      <div class="field" id="reviewNameField"><label>Your Name</label><input type="text" id="reviewName" placeholder="e.g. Notch_Fan22" maxlength="40"></div>
       <div class="field">
         <label>Rating</label>
         <div class="star-picker" id="reviewStarPicker">
@@ -1679,7 +1698,10 @@ function renderReviews(){
   grid.innerHTML = siteData.reviews.map(r => `
     <div class="review-card">
       <div class="review-card-top">
-        <div><div class="review-name">${escapeHtml(r.name)}</div><div class="review-date">${escapeHtml(r.date)}</div></div>
+        <div class="review-card-id">
+          <div class="review-avatar">${r.photo ? `<img src="${r.photo}" alt="">` : initials(r.name)}</div>
+          <div><div class="review-name">${escapeHtml(r.name)}</div><div class="review-date">${escapeHtml(r.date)}</div></div>
+        </div>
         <div class="stars">${starString(Number(r.stars) || 0)}</div>
       </div>
       <p class="review-text">${escapeHtml(r.text)}</p>
@@ -1801,12 +1823,17 @@ document.querySelectorAll('#reviewStarPicker button').forEach(btn => {
   });
 });
 document.getElementById('submitReview').addEventListener('click', () => {
-  const name = document.getElementById('reviewName').value.trim();
+  const loggedIn = !!auth.currentUser;
+  // Logged-in members post under their real account name + photo — no way
+  // to type a different name and impersonate someone else.
+  const name = loggedIn ? currentUserName : document.getElementById('reviewName').value.trim();
   const text = document.getElementById('reviewText').value.trim();
   const errEl = document.getElementById('reviewFormError');
   if(!name || !text || !selectedStars){ errEl.classList.add('show'); return; }
   errEl.classList.remove('show');
-  siteData.reviews.unshift({ name, stars: selectedStars, text, date: new Date().toLocaleDateString(undefined,{month:'short', year:'numeric'}) });
+  const review = { name, stars: selectedStars, text, date: new Date().toLocaleDateString(undefined,{month:'short', year:'numeric'}) };
+  if(loggedIn){ review.uid = auth.currentUser.uid; review.photo = currentUserPhoto || ''; }
+  siteData.reviews.unshift(review);
   saveSiteMeta(); renderReviews();
   document.getElementById('reviewFormMsg').classList.add('show');
   document.getElementById('reviewName').value=''; document.getElementById('reviewText').value='';
@@ -1816,7 +1843,10 @@ document.getElementById('submitReview').addEventListener('click', () => {
 
 /* ===================== JOIN TEAM APPLICATION ===================== */
 document.getElementById('submitJoinApplication').addEventListener('click', async () => {
-  const name = document.getElementById('joinName').value.trim();
+  const loggedIn = !!auth.currentUser;
+  // Logged-in members apply under their real account name — this is also
+  // what lets an admin's approval pull the same profile photo automatically.
+  const name = loggedIn ? currentUserName : document.getElementById('joinName').value.trim();
   const discord = document.getElementById('joinDiscord').value.trim();
   const role = document.getElementById('joinRole').value.trim();
   const borderColor = document.getElementById('joinBorderColor').value;
@@ -1832,6 +1862,7 @@ document.getElementById('submitJoinApplication').addEventListener('click', async
   const application = {
     id: newApplicationId(),
     name, discord, role, borderColor, experience, message,
+    uid: loggedIn ? auth.currentUser.uid : null,
     status: 'pending',
     date: new Date().toLocaleDateString(undefined,{month:'short', day:'numeric', year:'numeric'})
   };
@@ -2132,6 +2163,7 @@ document.getElementById('userLogoutBtn').addEventListener('click', async () => {
 // Renders the current user's photo (or initials fallback) in both the nav
 // button and the dropdown header.
 let currentUserPhoto = '';
+let currentUserName = '';
 function renderUserAvatar(photo, name){
   currentUserPhoto = photo || '';
   if(photo){
@@ -2140,6 +2172,31 @@ function renderUserAvatar(photo, name){
   } else {
     userAuthIcon.textContent = '👤';
     userDropdownAvatar.textContent = name ? initials(name) : '👤';
+  }
+  updatePostingAsWidgets();
+}
+
+// Fills in the "Posting as" / "Applying as" identity blocks on the Review
+// and Join Team forms with the logged-in user's own name + photo, and hides
+// the free-text name field so it can't be spoofed.
+function updatePostingAsWidgets(){
+  const loggedIn = !!auth.currentUser;
+  const name = currentUserName || '';
+  const avatarHtml = currentUserPhoto ? `<img src="${currentUserPhoto}" alt="">` : (name ? initials(name) : '👤');
+
+  document.getElementById('reviewPostingAs').style.display = loggedIn ? 'flex' : 'none';
+  document.getElementById('reviewNameField').style.display = loggedIn ? 'none' : '';
+  if(loggedIn){
+    document.getElementById('reviewPostingAsAvatar').innerHTML = avatarHtml;
+    document.getElementById('reviewPostingAsName').textContent = name;
+  }
+
+  document.getElementById('joinPostingAs').style.display = loggedIn ? 'flex' : 'none';
+  document.getElementById('joinPostingAsHint').style.display = loggedIn ? 'block' : 'none';
+  document.getElementById('joinNameField').style.display = loggedIn ? 'none' : '';
+  if(loggedIn){
+    document.getElementById('joinPostingAsAvatar').innerHTML = avatarHtml;
+    document.getElementById('joinPostingAsName').textContent = name;
   }
 }
 
@@ -2153,6 +2210,7 @@ function subscribeUserProfile(uid){
     const user = auth.currentUser;
     if(!user) return;
     const name = profile.displayName || user.displayName || (user.email ? user.email.split('@')[0] : 'Member');
+    currentUserName = name;
     userAuthLabel.textContent = name;
     userAuthBtn.title = name;
     userDropdownName.textContent = name;
@@ -2164,6 +2222,7 @@ function subscribeUserProfile(uid){
 onAuthStateChanged(auth, user => {
   if(user){
     const name = user.displayName || (user.email ? user.email.split('@')[0] : 'Member');
+    currentUserName = name;
     userAuthLabel.textContent = name;
     userAuthBtn.title = name;
     userDropdownName.textContent = name;
@@ -2172,6 +2231,7 @@ onAuthStateChanged(auth, user => {
     subscribeUserProfile(user.uid);
   } else {
     if(unsubUserProfile){ unsubUserProfile(); unsubUserProfile = null; }
+    currentUserName = '';
     userAuthLabel.textContent = 'Log In';
     userAuthBtn.title = '';
     userDropdownName.textContent = '';
@@ -2648,6 +2708,7 @@ function renderApplicationsEdit(){
           <div class="app-detail"><label>Discord</label><p>${escapeHtml(a.discord)}</p></div>
         </div>
         <div class="app-detail"><label>Role Requested</label><p>${escapeHtml(a.role)}</p></div>
+        ${a.uid ? `<div class="app-detail"><label>Profile</label><p>✓ Signed-in member — their current profile picture &amp; name will be used automatically on approval.</p></div>` : ''}
         ${a.borderColor ? `<div class="app-detail"><label>Border Color</label><p style="display:flex; align-items:center; gap:8px;"><span style="display:inline-block; width:16px; height:16px; border-radius:3px; background:${escapeHtml(a.borderColor)}; border:1px solid var(--line);"></span>${escapeHtml(a.borderColor)}</p></div>` : ''}
         ${a.experience ? `<div class="app-detail"><label>Experience</label><p>${escapeHtml(a.experience)}</p></div>` : ''}
         ${a.message ? `<div class="app-detail"><label>Why They Want to Join</label><p>${escapeHtml(a.message)}</p></div>` : ''}
@@ -2673,13 +2734,25 @@ async function approveApplication(i){
   const a = siteData.applications[i];
   if(!a || a.status === 'approved') return;
   a.status = 'approved';
+  // If the applicant applied while logged in, pull their current profile
+  // photo + display name straight from their account — no re-upload needed.
+  let teamName = a.name;
+  let teamAvatar = '';
+  if(a.uid){
+    try{
+      const snap = await get(ref(db, 'users/' + a.uid));
+      const profile = snap.exists() ? snap.val() : {};
+      teamName = profile.displayName || a.name;
+      teamAvatar = profile.photo || '';
+    }catch(e){ console.error('Could not load applicant profile for auto-avatar:', e); }
+  }
   siteData.team.push({
-    name: a.name,
+    name: teamName,
     role: a.role,
     bio: a.experience || 'New addition to the BlueX Team.',
     handle: a.discord,
     outline: a.borderColor || guessOutlineForRole(a.role),
-    avatar: ''
+    avatar: teamAvatar
   });
   renderApplicationsEdit();
   renderTeamEdit();
