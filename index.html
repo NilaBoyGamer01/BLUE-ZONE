@@ -1142,7 +1142,8 @@
     <div class="admin-foot">
       <span class="save-hint">Changes save live for every visitor of the site</span>
       <div class="admin-foot-actions">
-        <button class="btn btn-danger btn-sm" id="resetDefaults">Reset to Default</button>
+        <button class="btn btn-ghost btn-sm" id="undoAdminChange" title="Undo last change" disabled>↶ Undo</button>
+        <button class="btn btn-ghost btn-sm" id="redoAdminChange" title="Redo last undone change" disabled>↷ Redo</button>
         <button class="btn btn-primary" id="saveAdminChanges">Save Changes</button>
       </div>
     </div>
@@ -2441,6 +2442,119 @@ function resetIdleTimer(){
   }, IDLE_LOGOUT_MS);
 }
 
+/* ===================== ADMIN UNDO / REDO ===================== */
+// Every meaningful admin-panel edit (adding/removing/reordering an item, an
+// upload, a status change, or finishing a text-field edit) pushes a full
+// snapshot of siteData onto the undo stack *before* the change is applied.
+// Undo restores exactly what was there a moment before; Redo reverses an
+// Undo. Snapshots are plain deep clones, so this works regardless of which
+// tab or field the change came from.
+let adminHistoryStack = [];
+let adminRedoStack = [];
+let isRestoringAdminHistory = false;
+let pendingFieldSnapshot = null;
+const ADMIN_HISTORY_LIMIT = 50;
+
+function snapshotSiteData(){
+  return JSON.parse(JSON.stringify(siteData));
+}
+function pushAdminHistory(snap){
+  if(isRestoringAdminHistory) return;
+  adminHistoryStack.push(snap || snapshotSiteData());
+  if(adminHistoryStack.length > ADMIN_HISTORY_LIMIT) adminHistoryStack.shift();
+  adminRedoStack = [];
+  updateUndoRedoButtons();
+}
+// Attach to any text/textarea/color input inside the admin panel so a single
+// undo step covers a whole edit "session" (focus → blur), not every
+// keystroke — otherwise undo would only erase one character at a time.
+function attachFieldHistory(el){
+  el.addEventListener('focus', () => {
+    if(!pendingFieldSnapshot) pendingFieldSnapshot = snapshotSiteData();
+  });
+  el.addEventListener('blur', () => {
+    if(pendingFieldSnapshot){
+      pushAdminHistory(pendingFieldSnapshot);
+      pendingFieldSnapshot = null;
+    }
+  });
+}
+function updateUndoRedoButtons(){
+  const undoBtn = document.getElementById('undoAdminChange');
+  const redoBtn = document.getElementById('redoAdminChange');
+  if(undoBtn) undoBtn.disabled = adminHistoryStack.length === 0;
+  if(redoBtn) redoBtn.disabled = adminRedoStack.length === 0;
+}
+// Repopulates every field/list in the (already open) admin panel from the
+// current siteData. Used on open, and after an undo/redo swaps siteData out
+// from under the UI.
+function refreshAdminEditUI(){
+  document.getElementById('editHeroTitle').value = siteData.hero.title;
+  document.getElementById('editHeroLead').value = siteData.hero.lead;
+  document.getElementById('editStatMembers').value = siteData.stats.members;
+  document.getElementById('editStatOnline').value = siteData.stats.online;
+  document.getElementById('editStatSince').value = siteData.stats.since;
+  document.getElementById('editAbout1').value = siteData.about.story1;
+  document.getElementById('editAbout2').value = siteData.about.story2;
+  document.getElementById('editGoals').value = siteData.about.goals.join('\n');
+  document.getElementById('editTeamSubtitle').value = siteData.teamSubtitle;
+  renderTeamEdit(); renderGalleryEdit(); renderNewsEdit(); renderReviewsEdit(); renderApplicationsEdit();
+}
+// The static top-level fields (hero/stats/about/goals/subtitle) live outside
+// any re-rendered list, so they only need this attached once.
+['editHeroTitle','editHeroLead','editStatMembers','editStatOnline','editStatSince',
+ 'editAbout1','editAbout2','editGoals','editTeamSubtitle'].forEach(id => {
+  const el = document.getElementById(id);
+  if(el) attachFieldHistory(el);
+});
+async function persistAllAdminData(){
+  const [metaOk, galleryOk, appsOk] = await Promise.all([saveSiteMeta(), saveGalleryData(), saveApplicationsData()]);
+  return metaOk && galleryOk && appsOk;
+}
+async function performUndo(){
+  if(!adminHistoryStack.length) return;
+  pendingFieldSnapshot = null; // a field mid-edit shouldn't create a stray step
+  isRestoringAdminHistory = true;
+  const prev = adminHistoryStack.pop();
+  adminRedoStack.push(snapshotSiteData());
+  siteData = prev;
+  refreshAdminEditUI();
+  renderAll();
+  updateUndoRedoButtons();
+  isRestoringAdminHistory = false;
+  const ok = await persistAllAdminData();
+  showToast(ok ? '↶ Change undone' : '⚠ Undone locally — check connection');
+}
+async function performRedo(){
+  if(!adminRedoStack.length) return;
+  pendingFieldSnapshot = null;
+  isRestoringAdminHistory = true;
+  const next = adminRedoStack.pop();
+  adminHistoryStack.push(snapshotSiteData());
+  siteData = next;
+  refreshAdminEditUI();
+  renderAll();
+  updateUndoRedoButtons();
+  isRestoringAdminHistory = false;
+  const ok = await persistAllAdminData();
+  showToast(ok ? '↷ Change redone' : '⚠ Redone locally — check connection');
+}
+document.getElementById('undoAdminChange').addEventListener('click', performUndo);
+document.getElementById('redoAdminChange').addEventListener('click', performRedo);
+// Ctrl/Cmd+Z and Ctrl/Cmd+Shift+Z (or Ctrl+Y) — but only while the admin
+// panel is actually open, so they don't hijack the browser's own undo
+// elsewhere on the page.
+document.addEventListener('keydown', e => {
+  if(!adminPanelOverlay.classList.contains('open')) return;
+  const mod = e.ctrlKey || e.metaKey;
+  if(!mod || e.key.toLowerCase() !== 'z' && e.key.toLowerCase() !== 'y') return;
+  if(e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey)){
+    e.preventDefault(); performRedo();
+  } else if(e.key.toLowerCase() === 'z'){
+    e.preventDefault(); performUndo();
+  }
+});
+
 /* ===================== ADMIN PANEL TABS ===================== */
 document.querySelectorAll('.admin-tab').forEach(tab => {
   tab.addEventListener('click', () => {
@@ -2452,16 +2566,9 @@ document.querySelectorAll('.admin-tab').forEach(tab => {
 });
 
 function openAdminPanel(){
-  document.getElementById('editHeroTitle').value = siteData.hero.title;
-  document.getElementById('editHeroLead').value = siteData.hero.lead;
-  document.getElementById('editStatMembers').value = siteData.stats.members;
-  document.getElementById('editStatOnline').value = siteData.stats.online;
-  document.getElementById('editStatSince').value = siteData.stats.since;
-  document.getElementById('editAbout1').value = siteData.about.story1;
-  document.getElementById('editAbout2').value = siteData.about.story2;
-  document.getElementById('editGoals').value = siteData.about.goals.join('\n');
-  document.getElementById('editTeamSubtitle').value = siteData.teamSubtitle;
-  renderTeamEdit(); renderGalleryEdit(); renderNewsEdit(); renderReviewsEdit(); renderApplicationsEdit(); renderLogsList();
+  adminHistoryStack = []; adminRedoStack = []; pendingFieldSnapshot = null; updateUndoRedoButtons();
+  refreshAdminEditUI();
+  renderLogsList();
   adminPanelOverlay.classList.add('open');
 }
 
@@ -2503,6 +2610,7 @@ function renderTeamEdit(){
       </div>
     </div>`).join('');
   list.querySelectorAll('input[type=text],textarea,input[type=color]').forEach(el => {
+    attachFieldHistory(el);
     const evt = 'input';
     el.addEventListener(evt, () => {
       const i = el.dataset.team, f = el.dataset.field;
@@ -2521,6 +2629,7 @@ function renderTeamEdit(){
   });
   list.querySelectorAll('[data-reset-outline]').forEach(btn => {
     btn.addEventListener('click', () => {
+      pushAdminHistory();
       siteData.team[btn.dataset.resetOutline].outline = 'none';
       delete siteData.team[btn.dataset.resetOutline].leader;
       renderTeamEdit();
@@ -2530,6 +2639,7 @@ function renderTeamEdit(){
     btn.addEventListener('click', () => {
       const i = Number(btn.dataset.moveTeamUp);
       if(i <= 0) return;
+      pushAdminHistory();
       [siteData.team[i-1], siteData.team[i]] = [siteData.team[i], siteData.team[i-1]];
       renderTeamEdit();
     });
@@ -2538,6 +2648,7 @@ function renderTeamEdit(){
     btn.addEventListener('click', () => {
       const i = Number(btn.dataset.moveTeamDown);
       if(i >= siteData.team.length - 1) return;
+      pushAdminHistory();
       [siteData.team[i+1], siteData.team[i]] = [siteData.team[i], siteData.team[i+1]];
       renderTeamEdit();
     });
@@ -2556,6 +2667,7 @@ function renderTeamEdit(){
       e.preventDefault();
       const toIndex = Number(card.dataset.dragTeam);
       if(dragFromIndex === null || dragFromIndex === toIndex) return;
+      pushAdminHistory();
       const [moved] = siteData.team.splice(dragFromIndex, 1);
       siteData.team.splice(toIndex, 0, moved);
       renderTeamEdit();
@@ -2565,7 +2677,9 @@ function renderTeamEdit(){
     fileInput.addEventListener('change', async e => {
       const file = e.target.files[0]; if(!file) return;
       try{
-        siteData.team[fileInput.dataset.teamAvatarFile].avatar = await compressImageFile(file, 400, 0.8);
+        const compressed = await compressImageFile(file, 400, 0.8);
+        pushAdminHistory();
+        siteData.team[fileInput.dataset.teamAvatarFile].avatar = compressed;
         renderTeamEdit();
       }catch(err){
         console.error(err);
@@ -2575,15 +2689,17 @@ function renderTeamEdit(){
   });
   list.querySelectorAll('[data-remove-avatar]').forEach(btn => {
     btn.addEventListener('click', () => {
+      pushAdminHistory();
       siteData.team[btn.dataset.removeAvatar].avatar = '';
       renderTeamEdit();
     });
   });
   list.querySelectorAll('[data-remove-team]').forEach(btn => {
-    btn.addEventListener('click', () => { siteData.team.splice(btn.dataset.removeTeam,1); renderTeamEdit(); });
+    btn.addEventListener('click', () => { pushAdminHistory(); siteData.team.splice(btn.dataset.removeTeam,1); renderTeamEdit(); });
   });
 }
 document.getElementById('addTeamMember').addEventListener('click', () => {
+  pushAdminHistory();
   siteData.team.push({ name:"New Member", role:"Role", bio:"Bio here.", handle:"@handle", outline:"none", avatar:"" });
   renderTeamEdit();
 });
@@ -2605,13 +2721,16 @@ function renderGalleryEdit(){
       </div>
     </div>`).join('');
   grid.querySelectorAll('input[type=text]').forEach(el => {
+    attachFieldHistory(el);
     el.addEventListener('input', () => { siteData.gallery[el.dataset.gallery][el.dataset.field] = el.value; });
   });
   grid.querySelectorAll('[data-gallery-file]').forEach(fileInput => {
     fileInput.addEventListener('change', async e => {
       const file = e.target.files[0]; if(!file) return;
       try{
-        siteData.gallery[fileInput.dataset.galleryFile].img = await compressImageFile(file);
+        const compressed = await compressImageFile(file);
+        pushAdminHistory();
+        siteData.gallery[fileInput.dataset.galleryFile].img = compressed;
         renderGalleryEdit();
       }catch(err){
         console.error(err);
@@ -2620,10 +2739,11 @@ function renderGalleryEdit(){
     });
   });
   grid.querySelectorAll('[data-remove-gallery]').forEach(btn => {
-    btn.addEventListener('click', () => { siteData.gallery.splice(btn.dataset.removeGallery,1); renderGalleryEdit(); });
+    btn.addEventListener('click', () => { pushAdminHistory(); siteData.gallery.splice(btn.dataset.removeGallery,1); renderGalleryEdit(); });
   });
 }
 document.getElementById('addGallerySlot').addEventListener('click', () => {
+  pushAdminHistory();
   siteData.gallery.push({ img: PLACEHOLDER_IMG, title:"New photo", builder:"Anonymous" });
   renderGalleryEdit();
 });
@@ -2645,13 +2765,15 @@ function renderNewsEdit(){
       </div>
     </div>`).join('');
   list.querySelectorAll('input,textarea').forEach(el => {
+    attachFieldHistory(el);
     el.addEventListener('input', () => { siteData.news[el.dataset.news][el.dataset.field] = el.value; });
   });
   list.querySelectorAll('[data-remove-news]').forEach(btn => {
-    btn.addEventListener('click', () => { siteData.news.splice(btn.dataset.removeNews,1); renderNewsEdit(); });
+    btn.addEventListener('click', () => { pushAdminHistory(); siteData.news.splice(btn.dataset.removeNews,1); renderNewsEdit(); });
   });
 }
 document.getElementById('addNewsItem').addEventListener('click', () => {
+  pushAdminHistory();
   siteData.news.unshift({ date_day:"01", date_mon:"JAN", title:"New announcement", body:"Details here." });
   renderNewsEdit();
 });
@@ -2672,16 +2794,18 @@ function renderReviewsEdit(){
       </div>
     </div>`).join('');
   list.querySelectorAll('input,textarea').forEach(el => {
+    attachFieldHistory(el);
     el.addEventListener('input', () => {
       const f = el.dataset.field;
       siteData.reviews[el.dataset.review][f] = f === 'stars' ? Math.max(1, Math.min(5, Number(el.value) || 1)) : el.value;
     });
   });
   list.querySelectorAll('[data-remove-review]').forEach(btn => {
-    btn.addEventListener('click', () => { siteData.reviews.splice(btn.dataset.removeReview,1); renderReviewsEdit(); });
+    btn.addEventListener('click', () => { pushAdminHistory(); siteData.reviews.splice(btn.dataset.removeReview,1); renderReviewsEdit(); });
   });
 }
 document.getElementById('addReviewItem').addEventListener('click', () => {
+  pushAdminHistory();
   siteData.reviews.unshift({ name:"New Reviewer", stars:5, text:"Great server!", date: new Date().toLocaleDateString(undefined,{month:'short', year:'numeric'}) });
   renderReviewsEdit();
 });
@@ -2733,6 +2857,7 @@ function renderApplicationsEdit(){
 async function approveApplication(i){
   const a = siteData.applications[i];
   if(!a || a.status === 'approved') return;
+  pushAdminHistory();
   a.status = 'approved';
   // If the applicant applied while logged in, pull their current profile
   // photo + display name straight from their account — no re-upload needed.
@@ -2765,6 +2890,7 @@ async function approveApplication(i){
 async function rejectApplication(i){
   const a = siteData.applications[i];
   if(!a) return;
+  pushAdminHistory();
   a.status = 'rejected';
   renderApplicationsEdit();
   await saveApplicationsData();
@@ -2775,12 +2901,14 @@ async function rejectApplication(i){
 async function resetApplicationPending(i){
   const a = siteData.applications[i];
   if(!a) return;
+  pushAdminHistory();
   a.status = 'pending';
   renderApplicationsEdit();
   await saveApplicationsData();
   updatePendingAppBadge();
 }
 async function removeApplication(i){
+  pushAdminHistory();
   siteData.applications.splice(i, 1);
   renderApplicationsEdit();
   await saveApplicationsData();
@@ -2800,13 +2928,6 @@ document.getElementById('saveAdminChanges').addEventListener('click', async () =
   await Promise.all([saveSiteMeta(), saveGalleryData()]);
   renderAll();
   showToast('✓ Changes saved');
-});
-document.getElementById('resetDefaults').addEventListener('click', async () => {
-  if(!confirm('Reset all content back to the default? This cannot be undone.')) return;
-  siteData = JSON.parse(JSON.stringify(DEFAULT_DATA));
-  await Promise.all([saveSiteMeta(), saveGalleryData(), saveApplicationsData()]);
-  renderAll(); openAdminPanel();
-  showToast('✓ Reset to default');
 });
 adminPanelOverlay.addEventListener('click', e => { if(e.target === adminPanelOverlay) adminPanelOverlay.classList.remove('open'); });
 adminLoginOverlay.addEventListener('click', e => { if(e.target === adminLoginOverlay) adminLoginOverlay.classList.remove('open'); });
